@@ -1,0 +1,13 @@
+.azure
+.env
+.venv/
+__pycache__/
+.pytest_cache/
+credentials.json
+token.json
+.google-workspace-token.json
+*.token-cache.json
+*.log
+evaluation/calibration_packet.json
+evaluation/human_ratings.csv
+evaluation/calibration_results.json

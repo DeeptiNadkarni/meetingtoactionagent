@@ -1,0 +1,13 @@
+agent-framework-foundry==1.13.0
+azure-identity==1.26.0b2
+azure-storage-blob==12.31.0b1
+google-api-python-client==2.200.0
+google-auth-oauthlib==1.4.1
+msal==1.39.0
+pandas==3.0.5
+pydantic==2.13.5
+python-docx==1.2.0
+python-dotenv==1.2.3
+requests==2.34.2
+rank-bm25==0.2.2
+streamlit==1.63.0
