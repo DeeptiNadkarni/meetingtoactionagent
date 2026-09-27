@@ -184,6 +184,26 @@ Zoom connector flows also require server-safe hosted OAuth before they are enabl
 
 ## 4. Evaluation and Testing
 
+### Training and public dataset disclosure
+
+This project does not train or fine-tune any model. The application calls pretrained
+`gpt-5.4-mini` and `gpt-4.1-judge` deployments through Microsoft Foundry. Their provider-managed
+pretraining corpora are not selected, downloaded, modified, or redistributed by this repository.
+User-provided meeting transcripts are runtime inputs and are not added to an application training
+dataset.
+
+The **AMI Meeting Corpus** is the only external public dataset incorporated into the project, and
+it is used exclusively for evaluation. The benchmark uses AMI manual annotations version 1.6.2,
+licensed under CC BY 4.0, from https://groups.inf.ed.ac.uk/ami/corpus/. It contains 24 grounded
+excerpts split into 18 development cases and six frozen test cases. Each benchmark record retains
+the source meeting ID, dataset version, license, source URL, annotation method, and exact dialogue
+evidence. `evaluation/build_ami_benchmark.py` provides reproducible acquisition and transformation.
+
+The semantic F1 metric uses the pretrained `sentence-transformers/all-MiniLM-L6-v2` model only to
+embed reference and candidate entities for comparison. This project does not train that model or
+include its training corpus. Synthetic unit-test fixtures and manually entered demonstration
+transcripts are not external public datasets.
+
 ### Evaluation design
 
 The evaluation runner executes each labeled meeting through three model architectures and records both deterministic and model-based metrics.

@@ -524,6 +524,25 @@ Production telemetry should include:
 
 ## 14. Evaluation Design and Results
 
+### 14.1 Training and public dataset disclosure
+
+The system performs inference and evaluation only; it does not train or fine-tune a model.
+`gpt-5.4-mini` and `gpt-4.1-judge` are pretrained Microsoft Foundry deployments whose
+provider-managed pretraining corpora are outside this repository's data pipeline. User-provided
+transcripts remain runtime inputs and are not accumulated into an application training dataset.
+
+The **AMI Meeting Corpus** is the only external public dataset incorporated into the repository.
+It is used only for evaluation. The benchmark is reproducibly derived from AMI manual annotations
+version 1.6.2 under CC BY 4.0 from https://groups.inf.ed.ac.uk/ami/corpus/. Its 24 grounded excerpts
+are split into 18 development cases and six frozen test cases. Every generated record retains the
+source meeting ID, version, license, source URL, annotation method, and exact dialogue evidence.
+
+The semantic F1 calculation uses pretrained `sentence-transformers/all-MiniLM-L6-v2` embeddings;
+the project neither trains that model nor includes its training corpus. Synthetic test fixtures
+and manually entered demonstration transcripts are not external public datasets.
+
+### 14.2 Evaluation benchmark
+
 The benchmark contains 24 annotation-linked AMI Meeting Corpus excerpts: 18 development cases and
 six frozen test cases. Every test case is evaluated with all three strategies. Metrics include
 exact entity F1, semantic entity F1, deterministic grounding rate, latency, generation calls, and

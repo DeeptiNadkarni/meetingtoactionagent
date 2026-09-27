@@ -146,6 +146,27 @@ signed-in user reviews and saves it there. Apple Calendar, Thunderbird, Proton C
 other clients can use the `.ics` download. These draft/download paths do not collect provider
 credentials and do not send invitations automatically.
 
+## Training and public dataset disclosure
+
+This project does not train or fine-tune any model. It calls pretrained `gpt-5.4-mini` and
+`gpt-4.1-judge` deployments through Microsoft Foundry. Their provider-managed pretraining corpora
+are not selected, downloaded, modified, or redistributed by this repository. User-provided
+meeting transcripts are processed as runtime inputs; the application does not add them to a
+training dataset.
+
+The **AMI Meeting Corpus** is the only external public dataset incorporated into this repository,
+and it is used exclusively for evaluation. The reproducible benchmark uses manual annotations
+from AMI version 1.6.2 under the CC BY 4.0 license and retains 24 grounded excerpts: 18 development
+cases and six frozen test cases. Each generated record preserves the source meeting ID, dataset
+version, license, corpus URL, annotation method, and exact dialogue evidence. See the
+[AMI corpus website](https://groups.inf.ed.ac.uk/ami/corpus/) and
+`evaluation/build_ami_benchmark.py`.
+
+The semantic F1 metric uses the pretrained `sentence-transformers/all-MiniLM-L6-v2` embedding
+model for comparison only. The project does not train that model or include its training corpus.
+Synthetic unit-test fixtures and manually entered demonstration transcripts are not external
+public datasets.
+
 ## Evaluate architectures
 
 Set `FOUNDRY_JUDGE_MODEL` to a deployed model different from `FOUNDRY_MODEL`, then run
