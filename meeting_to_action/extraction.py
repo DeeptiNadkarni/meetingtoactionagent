@@ -3,6 +3,7 @@
 import asyncio
 import os
 from collections.abc import Awaitable, Callable
+from contextlib import AsyncExitStack, asynccontextmanager
 from datetime import date
 from enum import StrEnum
 from typing import TypeVar
@@ -14,6 +15,7 @@ from meeting_to_action.transcript import NumberedTranscript, repair_grounding, v
 
 PROJECT_ENDPOINT_ENV = "FOUNDRY_PROJECT_ENDPOINT"
 MODEL_ENV = "FOUNDRY_MODEL"
+TRAINED_MODEL_ENV = "FOUNDRY_TRAINED_MODEL"
 DEFAULT_MODEL = "gpt-5.4-mini"
 MANAGED_IDENTITY_ENV = "AZURE_USE_MANAGED_IDENTITY"
 
@@ -71,16 +73,24 @@ def _create_azure_credential():
     return AzureCliCredential()
 
 
-def _create_agent(name: str, instructions: str, model: str | None = None):
+@asynccontextmanager
+async def _create_agent(name: str, instructions: str, model: str | None = None):
     from agent_framework import Agent
     from agent_framework.foundry import FoundryChatClient
 
+    credential = _create_azure_credential()
     client = FoundryChatClient(
         project_endpoint=os.environ[PROJECT_ENDPOINT_ENV],
         model=model or os.getenv(MODEL_ENV, DEFAULT_MODEL),
-        credential=_create_azure_credential(),
+        credential=credential,
     )
-    return Agent(client=client, name=name, instructions=instructions)
+    agent = Agent(client=client, name=name, instructions=instructions)
+    async with AsyncExitStack() as stack:
+        stack.push_async_callback(credential.close)
+        stack.push_async_callback(client.project_client.close)
+        stack.push_async_callback(client.client.close)
+        await stack.enter_async_context(agent)
+        yield agent
 
 
 async def _run_structured(
@@ -114,18 +124,27 @@ record when the transcript provides no supporting quote.
 """.strip()
 
 
-async def extract_single(transcript: NumberedTranscript, title: str) -> MeetingExtraction:
+async def extract_single(
+    transcript: NumberedTranscript,
+    title: str,
+    model: str | None = None,
+) -> MeetingExtraction:
     prompt = f"Meeting title: {title}\n\nNumbered transcript:\n{transcript.prompt_text()}"
     return await _run_structured(
         "MeetingExtractor",
         f"Extract a complete meeting record. {GROUNDING_RULES}",
         prompt,
         MeetingExtraction,
+        model=model,
     )
 
 
-async def extract_verified(transcript: NumberedTranscript, title: str) -> MeetingExtraction:
-    draft = await extract_single(transcript, title)
+async def extract_verified(
+    transcript: NumberedTranscript,
+    title: str,
+    model: str | None = None,
+) -> MeetingExtraction:
+    draft = await extract_single(transcript, title, model=model)
     prompt = (
         f"Numbered transcript:\n{transcript.prompt_text()}\n\n"
         f"Draft extraction:\n{draft.model_dump_json(indent=2)}"
@@ -136,28 +155,36 @@ async def extract_verified(transcript: NumberedTranscript, title: str) -> Meetin
         f"and line ranges, and return the corrected complete record. {GROUNDING_RULES}",
         prompt,
         MeetingExtraction,
+        model=model,
     )
 
 
-async def extract_specialists(transcript: NumberedTranscript, title: str) -> MeetingExtraction:
+async def extract_specialists(
+    transcript: NumberedTranscript,
+    title: str,
+    model: str | None = None,
+) -> MeetingExtraction:
     source = f"Meeting title: {title}\n\nNumbered transcript:\n{transcript.prompt_text()}"
     actions_task = _run_structured(
         "ActionSpecialist",
         f"Extract only action items. {GROUNDING_RULES}",
         source,
         ActionList,
+        model=model,
     )
     decisions_task = _run_structured(
         "DecisionSpecialist",
         f"Extract only decisions. {GROUNDING_RULES}",
         source,
         DecisionList,
+        model=model,
     )
     questions_task = _run_structured(
         "QuestionSpecialist",
         f"Extract only unresolved questions. {GROUNDING_RULES}",
         source,
         QuestionList,
+        model=model,
     )
     actions, decisions, questions = await asyncio.gather(
         actions_task,
@@ -181,6 +208,7 @@ async def extract_specialists(transcript: NumberedTranscript, title: str) -> Mee
         f"structured meeting notes, then return one complete record. {GROUNDING_RULES}",
         prompt,
         MeetingExtraction,
+        model=model,
     )
 
 
@@ -248,11 +276,13 @@ async def extract_meeting(
     text: str,
     title: str,
     strategy: ExtractionStrategy,
+    *,
+    model: str | None = None,
 ) -> MeetingExtraction:
     transcript = NumberedTranscript.from_text(text)
     handlers: dict[
         ExtractionStrategy,
-        Callable[[NumberedTranscript, str], Awaitable[MeetingExtraction]],
+        Callable[[NumberedTranscript, str, str | None], Awaitable[MeetingExtraction]],
     ] = {
         ExtractionStrategy.SINGLE: extract_single,
         ExtractionStrategy.VERIFIED: extract_verified,
@@ -263,7 +293,7 @@ async def extract_meeting(
     else:
         if not foundry_is_configured():
             raise RuntimeError(f"{PROJECT_ENDPOINT_ENV} is required for {strategy.value}")
-        result = await handlers[strategy](transcript, title)
+        result = await handlers[strategy](transcript, title, model)
     result = repair_grounding(result, transcript)
     grounding_errors = validate_grounding(result, transcript)
     if grounding_errors:

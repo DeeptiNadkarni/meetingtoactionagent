@@ -11,3 +11,6 @@ token.json
 evaluation/calibration_packet.json
 evaluation/human_ratings.csv
 evaluation/calibration_results.json
+evaluation/sft.local/
+evaluation/*.local.json
+ft_job_*.json

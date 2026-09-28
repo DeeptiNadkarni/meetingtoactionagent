@@ -26,6 +26,9 @@
       "webFoundryModel": {
         "value": "${FOUNDRY_MODEL=gpt-5.4-mini}"
       },
+      "webFoundryTrainedModel": {
+        "value": "${FOUNDRY_TRAINED_MODEL=}"
+      },
       "principalId": {
         "value": "${AZURE_PRINCIPAL_ID}"
       },

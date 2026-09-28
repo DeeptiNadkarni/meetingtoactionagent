@@ -172,11 +172,11 @@ system-assigned managed identity with
 `AcrPull` scoped to that registry and `Foundry User` scoped to the existing Foundry project. No
 Azure credentials or local OAuth token files are included in the image.
 
-Deployment verification on September 27, 2026 confirmed HTTP 200 for the root page and Streamlit
-health endpoint, a healthy active revision, and a real extractor-plus-verifier run returning one
-action, one decision, one open question, and grounded notes through managed identity. The existing
-`gpt-5.4-mini` deployment remained at version `2026-03-17`, GlobalStandard capacity 10. The public
-site intentionally has no user authentication; enterprise use requires an approved identity,
+Deployment verification on September 28, 2026 confirmed HTTP 200 for the root page and Streamlit
+health endpoint, healthy revision `ca-mta-nlmcnaci--0000003`, a real production extraction, and a
+completed production-versus-trained Model Lab comparison through managed identity. Post-request
+logs contained no runtime errors, unclosed sessions, or unclosed connectors. The public site
+intentionally has no user authentication; enterprise use requires an approved identity,
 authorization, abuse-prevention, and transcript-retention design. Delegated Microsoft, Google, and
 Zoom connector flows also require server-safe hosted OAuth before they are enabled in production.
 
@@ -184,20 +184,58 @@ Zoom connector flows also require server-safe hosted OAuth before they are enabl
 
 ## 4. Evaluation and Testing
 
-### Training and public dataset disclosure
+### Fine-tuning pilot and public dataset disclosure
 
-This project does not train or fine-tune any model. The application calls pretrained
-`gpt-5.4-mini` and `gpt-4.1-judge` deployments through Microsoft Foundry. Their provider-managed
-pretraining corpora are not selected, downloaded, modified, or redistributed by this repository.
-User-provided meeting transcripts are runtime inputs and are not added to an application training
-dataset.
+The live application uses three distinct deployments in East US 2:
 
-The **AMI Meeting Corpus** is the only external public dataset incorporated into the project, and
-it is used exclusively for evaluation. The benchmark uses AMI manual annotations version 1.6.2,
-licensed under CC BY 4.0, from https://groups.inf.ed.ac.uk/ami/corpus/. It contains 24 grounded
-excerpts split into 18 development cases and six frozen test cases. Each benchmark record retains
-the source meeting ID, dataset version, license, source URL, annotation method, and exact dialogue
-evidence. `evaluation/build_ami_benchmark.py` provides reproducible acquisition and transformation.
+| Role | Deployment | Model/version | Tier and capacity | Use |
+| --- | --- | --- | --- | --- |
+| Production generation | `gpt-5.4-mini` | `gpt-5.4-mini`, `2026-03-17` | GlobalStandard, 10 | Default extraction, Ask, and Model Lab baseline |
+| Independent judge | `gpt-4.1-judge` | `gpt-4.1`, `2025-04-14` | GlobalStandard, 10 | Offline evaluation only |
+| Experimental generation | `meeting-to-action-sft-v1` | Fine-tuned `gpt-4.1-mini`, `2025-04-14`, checkpoint step 48 | DeveloperTier, 10 | Model Lab only |
+
+The deployments belong to Foundry account `ai-account-nlmcnaciofa6y` and project
+`ai-project-meetingtoaction`. `FOUNDRY_MODEL` preserves the production path;
+`FOUNDRY_TRAINED_MODEL` activates a separate explicit model override. Model Lab applies the
+selected extraction architecture to the same transcript and renders production and trained
+results side by side. User-provided website transcripts remain runtime inputs and are never added
+to training data.
+
+The **AMI Meeting Corpus** is the only external public dataset incorporated into the project. The
+benchmark uses AMI manual annotations version 1.6.2, licensed under CC BY 4.0, from
+https://groups.inf.ed.ac.uk/ami/corpus/. It contains 24 grounded excerpts split into 18 development
+cases and six frozen test cases. The pilot used 60 additional non-test AMI meetings after all
+targets received human review, producing 48 training and 12 validation examples.
+`meeting_to_action/sft_dataset.py` hard-blocks the six frozen meeting IDs, excludes every
+test-split record, validates exact evidence grounding, creates meeting-disjoint training and
+validation sets, and writes a provenance manifest. Generated data remains local and ignored by
+Git.
+
+The succeeded SFT run was job `ftjob-fee47a35427043ee9b4ed301464203f8`. It used DeveloperTier,
+two epochs, a `0.5` learning-rate multiplier, service-selected batch size `1`, 366,438 trained
+tokens, and 336,000 billed tokens. Its final model ID was
+`gpt-4.1-mini-2025-04-14.ft-fee47a35427043ee9b4ed301464203f8-meeting-to-action-v1`.
+Validation evidence favored the deployable `:ckpt-step-48` checkpoint over the final step 96 model.
+
+The frozen promotion test compared pretrained base `gpt-4.1-mini` with that SFT checkpoint using
+the single-model architecture. It did not compare the checkpoint directly with production
+`gpt-5.4-mini`:
+
+| Metric | Base `gpt-4.1-mini` | SFT checkpoint | Delta |
+| --- | ---: | ---: | ---: |
+| Exact entity F1 | 0.000 | 0.000 | 0.000 |
+| Semantic entity F1 | 0.000 | 0.054 | +0.054 |
+| Deterministic grounding | 1.000 | 1.000 | 0.000 |
+| Judge correctness | 3.333 | 3.500 | +0.167 |
+| Judge completeness | 2.000 | 2.667 | +0.667 |
+| Judge grounding | 3.167 | 3.500 | +0.333 |
+| Judge average | 2.833 | 3.223 | +0.390 |
+| Mean latency | 11.284 s | 17.785 s | +6.501 s |
+
+The quality gains with unchanged deterministic grounding justified experimental Model Lab access.
+The latency regression and six-case sample size ruled out replacing production. Model Lab's live
+production-versus-trained view is an operational comparison for a selected transcript, not a
+substitute for this frozen benchmark.
 
 The semantic F1 metric uses the pretrained `sentence-transformers/all-MiniLM-L6-v2` model only to
 embed reference and candidate entities for comparison. This project does not train that model or

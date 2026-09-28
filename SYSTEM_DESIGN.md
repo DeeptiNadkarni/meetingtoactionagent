@@ -339,8 +339,18 @@ tradeoff decision, not a claim of dominance across every metric.
 
 ### 8.3 Model deployments
 
-- **Generation:** `gpt-5.4-mini` through `FOUNDRY_MODEL`.
-- **Independent evaluation judge:** `gpt-4.1-judge` through `FOUNDRY_JUDGE_MODEL`.
+| Role | Deployment | Model/version | Tier and capacity | Routing |
+| --- | --- | --- | --- | --- |
+| Production generation | `gpt-5.4-mini` | `gpt-5.4-mini`, `2026-03-17` | GlobalStandard, 10 | `FOUNDRY_MODEL`; default extraction and Ask |
+| Independent judge | `gpt-4.1-judge` | `gpt-4.1`, `2025-04-14` | GlobalStandard, 10 | `FOUNDRY_JUDGE_MODEL`; offline evaluation only |
+| Experimental generation | `meeting-to-action-sft-v1` | Fine-tuned `gpt-4.1-mini`, `2025-04-14`, checkpoint step 48 | DeveloperTier, 10 | `FOUNDRY_TRAINED_MODEL`; Model Lab only |
+
+The deployments are in East US 2 under Foundry account `ai-account-nlmcnaciofa6y` and project
+`ai-project-meetingtoaction`. Model Lab reuses the selected extraction architecture and transcript,
+shows the existing production result as its baseline, and invokes the trained deployment through
+an explicit model override. It does not mutate `FOUNDRY_MODEL`, write training data, or affect the
+normal extraction, review, Ask, or calendar paths.
+
 - The evaluation code rejects a missing judge deployment or one with the same name as the
   generation deployment.
 
@@ -524,18 +534,47 @@ Production telemetry should include:
 
 ## 14. Evaluation Design and Results
 
-### 14.1 Training and public dataset disclosure
+### 14.1 Fine-tuning pilot and public dataset disclosure
 
-The system performs inference and evaluation only; it does not train or fine-tune a model.
-`gpt-5.4-mini` and `gpt-4.1-judge` are pretrained Microsoft Foundry deployments whose
-provider-managed pretraining corpora are outside this repository's data pipeline. User-provided
-transcripts remain runtime inputs and are not accumulated into an application training dataset.
+Production inference still uses pretrained `gpt-5.4-mini`, and `gpt-4.1-judge` remains an
+independent pretrained evaluation deployment. Model Lab additionally exposes the experimental
+`meeting-to-action-sft-v1` deployment. Its succeeded Microsoft Foundry SFT job was
+`ftjob-fee47a35427043ee9b4ed301464203f8`; the final model ID was
+`gpt-4.1-mini-2025-04-14.ft-fee47a35427043ee9b4ed301464203f8-meeting-to-action-v1`, and the
+deployed model ID appends `:ckpt-step-48`. User-provided website transcripts remain runtime inputs
+and are never accumulated into the application training dataset.
 
 The **AMI Meeting Corpus** is the only external public dataset incorporated into the repository.
-It is used only for evaluation. The benchmark is reproducibly derived from AMI manual annotations
-version 1.6.2 under CC BY 4.0 from https://groups.inf.ed.ac.uk/ami/corpus/. Its 24 grounded excerpts
-are split into 18 development cases and six frozen test cases. Every generated record retains the
-source meeting ID, version, license, source URL, annotation method, and exact dialogue evidence.
+The benchmark is reproducibly derived from AMI manual annotations version 1.6.2 under CC BY 4.0
+from https://groups.inf.ed.ac.uk/ami/corpus/. Its 24 grounded excerpts are split into 18
+development cases and six frozen test cases. The `gpt-4.1-mini` SFT pilot used 60 additional
+non-test AMI meetings after human-reviewed enrichment, split into 48 training and 12 validation
+examples. The dataset builder hard-blocks the six frozen meeting IDs, excludes all test-split
+records, validates exact grounding, creates a meeting-level split, and emits a provenance
+manifest. Generated training and review files are not committed.
+
+Training used DeveloperTier, two epochs, a `0.5` learning-rate multiplier, service-selected batch size `1`,
+366,438 trained tokens, and 336,000 billed tokens. Validation evidence favored checkpoint step 48
+over the final step 96 model. The frozen-set comparison used the single-model strategy for both
+the pretrained `gpt-4.1-mini` base and trained deployment. This promotion test isolates the effect
+of SFT within one model family; it is not a direct benchmark against production `gpt-5.4-mini`:
+
+| Metric | Base `gpt-4.1-mini` | SFT checkpoint | Delta |
+| --- | ---: | ---: | ---: |
+| Exact entity F1 | 0.000 | 0.000 | 0.000 |
+| Semantic entity F1 | 0.000 | 0.054 | +0.054 |
+| Deterministic grounding | 1.000 | 1.000 | 0.000 |
+| Judge correctness | 3.333 | 3.500 | +0.167 |
+| Judge completeness | 2.000 | 2.667 | +0.667 |
+| Judge grounding | 3.167 | 3.500 | +0.333 |
+| Judge average | 2.833 | 3.223 | +0.390 |
+| Mean latency | 11.284 s | 17.785 s | +6.501 s |
+
+The quality gain with unchanged deterministic grounding justified experimental Model Lab access.
+The latency regression and six-case sample size do not justify replacing the production model.
+Separately, Model Lab performs an operational side-by-side comparison between production
+`gpt-5.4-mini` and the SFT deployment on a user-supplied transcript, without treating one example
+as benchmark evidence.
 
 The semantic F1 calculation uses pretrained `sentence-transformers/all-MiniLM-L6-v2` embeddings;
 the project neither trains that model nor includes its training corpus. Synthetic test fixtures

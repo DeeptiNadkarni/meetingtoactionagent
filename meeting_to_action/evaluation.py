@@ -149,9 +149,13 @@ async def judge_extraction(
     )
 
 
-async def evaluate_case(case: dict[str, Any], strategy: ExtractionStrategy) -> dict[str, Any]:
+async def evaluate_case(
+    case: dict[str, Any],
+    strategy: ExtractionStrategy,
+    model: str | None = None,
+) -> dict[str, Any]:
     started = time.perf_counter()
-    actual = await extract_meeting(case["transcript"], case["title"], strategy)
+    actual = await extract_meeting(case["transcript"], case["title"], strategy, model=model)
     elapsed = time.perf_counter() - started
     expected = MeetingExtraction.model_validate(case["expected"])
     transcript = NumberedTranscript.from_text(case["transcript"])
@@ -167,6 +171,7 @@ async def evaluate_case(case: dict[str, Any], strategy: ExtractionStrategy) -> d
         "grounding_rate": round(1 - len(grounding_errors) / max(evidence_count, 1), 4),
         "latency_seconds": round(elapsed, 3),
         "model_calls": MODEL_CALLS[strategy],
+        "generation_model": model or os.getenv("FOUNDRY_MODEL", "test-double"),
         "judge_correctness": judge.correctness,
         "judge_completeness": judge.completeness,
         "judge_grounding": judge.grounding,
@@ -181,14 +186,19 @@ async def evaluate_case(case: dict[str, Any], strategy: ExtractionStrategy) -> d
     }
 
 
-async def run_evaluation(dataset_path: Path, split: str | None = "test") -> list[dict[str, Any]]:
+async def run_evaluation(
+    dataset_path: Path,
+    split: str | None = "test",
+    strategies: tuple[ExtractionStrategy, ...] = tuple(MODEL_CALLS),
+    model: str | None = None,
+) -> list[dict[str, Any]]:
     cases = json.loads(dataset_path.read_text(encoding="utf-8"))
     results: list[dict[str, Any]] = []
     for case in cases:
         if split and case.get("split") and case["split"] != split:
             continue
-        for strategy in MODEL_CALLS:
-            results.append(await evaluate_case(case, strategy))
+        for strategy in strategies:
+            results.append(await evaluate_case(case, strategy, model=model))
     return results
 
 
@@ -198,8 +208,27 @@ def main() -> None:
     parser.add_argument("dataset", type=Path, nargs="?", default=Path("evaluation/meetings.json"))
     parser.add_argument("--output", type=Path, default=Path("evaluation/results.json"))
     parser.add_argument("--split", choices=("development", "test", "all"), default="test")
+    parser.add_argument("--model", help="Foundry deployment to evaluate instead of FOUNDRY_MODEL")
+    parser.add_argument(
+        "--strategy",
+        choices=("single", "verified", "specialists", "all"),
+        default="all",
+    )
     args = parser.parse_args()
-    results = asyncio.run(run_evaluation(args.dataset, None if args.split == "all" else args.split))
+    strategy_options = {
+        "single": (ExtractionStrategy.SINGLE,),
+        "verified": (ExtractionStrategy.VERIFIED,),
+        "specialists": (ExtractionStrategy.SPECIALISTS,),
+        "all": tuple(MODEL_CALLS),
+    }
+    results = asyncio.run(
+        run_evaluation(
+            args.dataset,
+            None if args.split == "all" else args.split,
+            strategy_options[args.strategy],
+            args.model,
+        )
+    )
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(results, indent=2), encoding="utf-8")
     print(json.dumps(results, indent=2))

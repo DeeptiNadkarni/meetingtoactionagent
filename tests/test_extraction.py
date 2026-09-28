@@ -68,6 +68,32 @@ def test_structured_run_closes_agent(monkeypatch: pytest.MonkeyPatch) -> None:
     assert agent.closed
 
 
+def test_verified_extraction_uses_explicit_model_for_both_passes(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    expected = MeetingExtraction(title="Test", summary="Complete")
+    models: list[str | None] = []
+
+    async def fake_run_structured(name, instructions, prompt, output_type, model=None):
+        models.append(model)
+        return expected
+
+    monkeypatch.setenv(extraction_module.PROJECT_ENDPOINT_ENV, "https://example.test/project")
+    monkeypatch.setattr(extraction_module, "_run_structured", fake_run_structured)
+
+    result = asyncio.run(
+        extract_meeting(
+            TRANSCRIPT,
+            "Test",
+            ExtractionStrategy.VERIFIED,
+            model="meeting-actions-ft",
+        )
+    )
+
+    assert result == expected
+    assert models == ["meeting-actions-ft", "meeting-actions-ft"]
+
+
 def test_numbered_transcript_checks_exact_quote_and_range() -> None:
     transcript = NumberedTranscript.from_text(TRANSCRIPT)
 

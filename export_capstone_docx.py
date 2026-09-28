@@ -42,7 +42,7 @@ def add_paragraph(document: Document, text: str, style: str | None = None) -> No
     add_inline_text(paragraph, text)
 
 
-def configure_document(document: Document) -> None:
+def configure_document(document: Document, document_label: str) -> None:
     section = document.sections[0]
     section.top_margin = Inches(0.7)
     section.bottom_margin = Inches(0.7)
@@ -66,7 +66,7 @@ def configure_document(document: Document) -> None:
 
     footer = section.footer.paragraphs[0]
     footer.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    run = footer.add_run("Meeting to Action | Capstone Project Documentation")
+    run = footer.add_run(f"Meeting to Action | {document_label}")
     run.font.name = "Aptos"
     run.font.size = Pt(8)
     run.font.color.rgb = RGBColor(80, 99, 95)
@@ -89,9 +89,16 @@ def add_table(document: Document, rows: list[list[str]]) -> None:
     document.add_paragraph()
 
 
-def export(source: Path = DEFAULT_SOURCE, output: Path = DEFAULT_OUTPUT) -> None:
-    document = Document()
-    configure_document(document)
+def export(
+    source: Path = DEFAULT_SOURCE,
+    output: Path = DEFAULT_OUTPUT,
+    template: Path | None = None,
+) -> None:
+    document_label = (
+        "System Design" if source.name.casefold() == "system_design.md" else "Capstone Project Documentation"
+    )
+    document = Document(template) if template else Document()
+    configure_document(document, document_label)
     lines = source.read_text(encoding="utf-8").splitlines()
     index = 0
     paragraph_lines: list[str] = []
@@ -176,7 +183,7 @@ def export(source: Path = DEFAULT_SOURCE, output: Path = DEFAULT_OUTPUT) -> None
         index += 1
 
     flush_paragraph()
-    document.core_properties.title = "Meeting to Action - Capstone Project Documentation"
+    document.core_properties.title = f"Meeting to Action - {document_label}"
     document.core_properties.subject = "AI capstone architecture, evaluation, and testing"
     document.core_properties.author = "Meeting to Action Project"
     document.save(output)
@@ -186,5 +193,6 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--source", type=Path, default=DEFAULT_SOURCE)
     parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT)
+    parser.add_argument("--template", type=Path)
     arguments = parser.parse_args()
-    export(arguments.source, arguments.output)
+    export(arguments.source, arguments.output, arguments.template)

@@ -22,12 +22,15 @@ ingress, a system-assigned managed identity, 0-1 replicas, and an authenticated 
 Container Registry with its admin user disabled. The hosted runtime uses
 `ManagedIdentityCredential` and has `Foundry User` scoped to the
 existing Microsoft Foundry project; `AcrPull` is scoped only to its registry. The existing
-`gpt-5.4-mini` deployment remains unchanged.
+`gpt-5.4-mini` deployment remains unchanged. Model Lab is enabled separately through
+`FOUNDRY_TRAINED_MODEL=meeting-to-action-sft-v1`; it does not replace the normal production path.
 
-Deployment verification on September 27, 2026 confirmed HTTP 200 from the application and
-`/_stcore/health`, a healthy Container App revision, successful extractor-plus-verifier output
-through managed identity, and clean post-request logs. The site is intentionally public and has no
-user authentication, so anyone with the URL can submit transcript content and consume model quota.
+Deployment verification on September 28, 2026 confirmed HTTP 200 from the application and
+`/_stcore/health`, healthy revision `ca-mta-nlmcnaci--0000003`, successful production extraction,
+and a completed production-versus-trained Model Lab comparison through managed identity. The
+post-request logs contained no runtime errors, unclosed sessions, or unclosed connectors. The site
+is intentionally public and has no user authentication, so anyone with the URL can submit
+transcript content and consume model quota.
 Hosted delegated Microsoft, Google, and Zoom connector flows still require a server-safe OAuth
 redesign; paste and upload plus Foundry extraction are verified live.
 
@@ -146,21 +149,78 @@ signed-in user reviews and saves it there. Apple Calendar, Thunderbird, Proton C
 other clients can use the `.ics` download. These draft/download paths do not collect provider
 credentials and do not send invitations automatically.
 
-## Training and public dataset disclosure
+## Fine-tuning pilot and public dataset disclosure
 
-This project does not train or fine-tune any model. It calls pretrained `gpt-5.4-mini` and
-`gpt-4.1-judge` deployments through Microsoft Foundry. Their provider-managed pretraining corpora
-are not selected, downloaded, modified, or redistributed by this repository. User-provided
-meeting transcripts are processed as runtime inputs; the application does not add them to a
-training dataset.
+### Deployed model inventory
 
-The **AMI Meeting Corpus** is the only external public dataset incorporated into this repository,
-and it is used exclusively for evaluation. The reproducible benchmark uses manual annotations
-from AMI version 1.6.2 under the CC BY 4.0 license and retains 24 grounded excerpts: 18 development
-cases and six frozen test cases. Each generated record preserves the source meeting ID, dataset
-version, license, corpus URL, annotation method, and exact dialogue evidence. See the
+| Role | Deployment | Model/version | Tier and capacity | Application path |
+| --- | --- | --- | --- | --- |
+| Production generation | `gpt-5.4-mini` | `gpt-5.4-mini`, `2026-03-17` | GlobalStandard, 10 | Default extraction, Ask, and the baseline side of Model Lab |
+| Independent judge | `gpt-4.1-judge` | `gpt-4.1`, `2025-04-14` | GlobalStandard, 10 | Offline evaluation only |
+| Experimental generation | `meeting-to-action-sft-v1` | Fine-tuned `gpt-4.1-mini`, `2025-04-14`, checkpoint step 48 | DeveloperTier, 10 | Trained side of Model Lab only |
+
+All three deployments are in East US 2 under Foundry account `ai-account-nlmcnaciofa6y` and
+project `ai-project-meetingtoaction`. `FOUNDRY_MODEL=gpt-5.4-mini` controls the production path,
+while `FOUNDRY_TRAINED_MODEL=meeting-to-action-sft-v1` activates the separate comparison path.
+Model Lab applies the currently selected extraction design to the same transcript, retains the
+already generated production result, invokes the trained deployment independently, and renders
+the outputs side by side. It never adds submitted website transcripts to training data.
+
+The **AMI Meeting Corpus** is the only external public dataset incorporated into this repository.
+The current evaluation benchmark uses manual annotations from AMI version 1.6.2 under the CC BY
+4.0 license and retains 24 grounded excerpts: 18 development cases and six frozen test cases. The
+SFT pilot used 60 additional non-test AMI meetings after all target records were enriched and
+human-approved, producing 48 training and 12 validation examples. Each generated record preserves
+the source meeting ID, dataset version, license, corpus URL, annotation method, and exact dialogue
+evidence. See the
 [AMI corpus website](https://groups.inf.ed.ac.uk/ami/corpus/) and
 `evaluation/build_ami_benchmark.py`.
+
+The six frozen IDs (`TS3011b`, `IS1005c`, `ES2013b`, `ES2002c`, `ES2013d`, and `ES2007c`) are
+hard-blocked in `meeting_to_action/sft_dataset.py`. The builder also excludes every case marked
+`test`, requires a reviewed `MeetingExtraction` for each development case, validates all evidence
+against the source transcript, creates meeting-disjoint training and validation files, and writes
+a provenance manifest. Generated candidate, review, and SFT files are ignored by Git.
+
+The succeeded supervised run was job `ftjob-fee47a35427043ee9b4ed301464203f8`. It used two epochs,
+a `0.5` learning-rate multiplier, and service-selected batch size `1`; it trained 366,438 tokens
+and billed 336,000. The final model ID is
+`gpt-4.1-mini-2025-04-14.ft-fee47a35427043ee9b4ed301464203f8-meeting-to-action-v1`.
+Validation evidence favored its deployable step 48 checkpoint over the final step 96 model, so
+Model Lab deploys the `:ckpt-step-48` variant.
+
+The frozen promotion test compared the pretrained `gpt-4.1-mini` base with its SFT checkpoint
+using the single-model architecture; it was not a direct comparison with production
+`gpt-5.4-mini`. Across six frozen meetings, the checkpoint preserved `1.000` deterministic
+grounding, improved semantic F1 from `0.000` to `0.054`, and improved judge average from `2.833`
+to `3.223`; mean latency increased from `11.284 s` to `17.785 s`. Those gains justified an
+experimental Model Lab deployment, while the latency regression and small test set ruled out a
+production replacement.
+
+Build an 80-meeting local candidate set, review and enrich its development targets in a JSON
+object keyed by case ID, then generate the SFT files:
+
+```powershell
+python evaluation/build_ami_benchmark.py --count 80 --output evaluation/sft-candidates.local.json
+python -m meeting_to_action.sft_dataset `
+   --cases evaluation/sft-candidates.local.json `
+   --reviews evaluation/reviewed_sft_extractions.local.json
+```
+
+The second command writes `training.jsonl`, `validation.jsonl`, and `manifest.json` under
+`evaluation/sft.local/`. It performs no Azure upload and creates no paid resource.
+
+Before running that second command, review the generated enrichment packet locally:
+
+```powershell
+python -m meeting_to_action.sft_enrichment `
+   --cases evaluation/sft-candidates.local.json
+streamlit run sft_review_app.py
+```
+
+The review queue displays the numbered source transcript beside editable target fields and exact
+evidence. Approval requires a reviewer identity and reruns deterministic grounding validation.
+Rejected or draft records cannot enter the SFT dataset.
 
 The semantic F1 metric uses the pretrained `sentence-transformers/all-MiniLM-L6-v2` embedding
 model for comparison only. The project does not train that model or include its training corpus.

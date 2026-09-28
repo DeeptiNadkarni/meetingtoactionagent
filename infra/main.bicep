@@ -59,6 +59,9 @@ param resourceTokenSalt string = ''
 @description('Model deployment used by the Meeting-to-Action website')
 param webFoundryModel string = 'gpt-5.4-mini'
 
+@description('Optional fine-tuned model deployment exposed only in Model Lab')
+param webFoundryTrainedModel string = ''
+
 @description('Optional. Name of an existing AI Services account within the resource group. If not provided, a new one will be created.')
 param aiFoundryResourceName string = ''
 
@@ -234,6 +237,7 @@ module webContainerApp 'core/host/web-container-app.bicep' = {
     logAnalyticsWorkspaceName: logAnalyticsWorkspaceName
     foundryProjectEndpoint: useExistingAiProject ? existingAiProject.outputs.FOUNDRY_PROJECT_ENDPOINT : aiProject.outputs.FOUNDRY_PROJECT_ENDPOINT
     foundryModel: webFoundryModel
+    foundryTrainedModel: webFoundryTrainedModel
   }
 }
 

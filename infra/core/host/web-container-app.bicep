@@ -21,6 +21,16 @@ param foundryProjectEndpoint string
 @description('Deployed Foundry model name')
 param foundryModel string
 
+@description('Optional fine-tuned model deployment used by Model Lab')
+param foundryTrainedModel string = ''
+
+var trainedModelEnvironment = empty(foundryTrainedModel) ? [] : [
+  {
+    name: 'FOUNDRY_TRAINED_MODEL'
+    value: foundryTrainedModel
+  }
+]
+
 resource logAnalyticsWorkspace 'Microsoft.OperationalInsights/workspaces@2021-12-01-preview' existing = {
   name: logAnalyticsWorkspaceName
 }
@@ -72,7 +82,7 @@ resource containerApp 'Microsoft.App/containerApps@2025-01-01' = {
             '-c'
             'if [ -f /app/app.py ]; then exec streamlit run /app/app.py --server.address=0.0.0.0 --server.port=8501 --server.headless=true --browser.gatherUsageStats=false; else exec python -m http.server 8501; fi'
           ]
-          env: [
+          env: concat([
             {
               name: 'AZURE_USE_MANAGED_IDENTITY'
               value: 'true'
@@ -85,7 +95,7 @@ resource containerApp 'Microsoft.App/containerApps@2025-01-01' = {
               name: 'FOUNDRY_MODEL'
               value: foundryModel
             }
-          ]
+          ], trainedModelEnvironment)
           resources: {
             cpu: json('1')
             memory: '2Gi'

@@ -90,7 +90,7 @@ def test_evaluation_defaults_to_frozen_test_split(monkeypatch, tmp_path) -> None
         encoding="utf-8",
     )
 
-    async def fake_evaluate_case(case, strategy):
+    async def fake_evaluate_case(case, strategy, model=None):
         return {"case": case["id"], "strategy": strategy.value}
 
     monkeypatch.setattr(evaluation, "evaluate_case", fake_evaluate_case)
@@ -114,7 +114,7 @@ def test_evaluation_combines_quantitative_metrics_with_llm_judge(monkeypatch) ->
         "expected": expected.model_dump(mode="json"),
     }
 
-    async def fake_extract_meeting(transcript, title, strategy):
+    async def fake_extract_meeting(transcript, title, strategy, *, model=None):
         return expected
 
     async def fake_judge_extraction(transcript, actual, reference):
@@ -128,14 +128,37 @@ def test_evaluation_combines_quantitative_metrics_with_llm_judge(monkeypatch) ->
     monkeypatch.setattr(evaluation, "extract_meeting", fake_extract_meeting)
     monkeypatch.setattr(evaluation, "judge_extraction", fake_judge_extraction)
 
-    result = asyncio.run(evaluate_case(case, ExtractionStrategy.SINGLE))
+    result = asyncio.run(evaluate_case(case, ExtractionStrategy.SINGLE, model="candidate-model"))
 
     assert result["entity_f1"] == 1.0
     assert result["semantic_entity_f1"] == 1.0
     assert result["grounding_rate"] == 1.0
+    assert result["generation_model"] == "candidate-model"
     assert result["judge_correctness"] == 5
     assert result["judge_completeness"] == 4
     assert result["judge_grounding"] == 5
     assert result["judge_average"] == 4.67
     assert result["judge_model_calls"] == 1
     assert result["judge_model"] == "test-double"
+
+
+def test_evaluation_can_target_one_strategy_and_model(monkeypatch, tmp_path) -> None:
+    dataset_path = tmp_path / "meetings.json"
+    dataset_path.write_text('[{"id":"test","split":"test"}]', encoding="utf-8")
+    calls = []
+
+    async def fake_evaluate_case(case, strategy, model=None):
+        calls.append((case["id"], strategy, model))
+        return {"case": case["id"], "strategy": strategy.value}
+
+    monkeypatch.setattr(evaluation, "evaluate_case", fake_evaluate_case)
+    results = asyncio.run(
+        run_evaluation(
+            dataset_path,
+            strategies=(ExtractionStrategy.SINGLE,),
+            model="gpt-4.1-mini-baseline",
+        )
+    )
+
+    assert len(results) == 1
+    assert calls == [("test", ExtractionStrategy.SINGLE, "gpt-4.1-mini-baseline")]

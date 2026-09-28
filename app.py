@@ -24,7 +24,14 @@ from meeting_to_action.connectors import (
     ZoomConnector,
     load_google_credentials,
 )
-from meeting_to_action.extraction import ExtractionStrategy, extract_meeting, foundry_is_configured
+from meeting_to_action.extraction import (
+    DEFAULT_MODEL,
+    MODEL_ENV,
+    TRAINED_MODEL_ENV,
+    ExtractionStrategy,
+    extract_meeting,
+    foundry_is_configured,
+)
 from meeting_to_action.ingestion import TranscriptDocument, parse_uploaded_transcript
 from meeting_to_action.models import MeetingExtraction
 from meeting_to_action.review import apply_review_edits, build_change_audit
@@ -503,6 +510,97 @@ def chat_panel(transcript_text: str, reviewed: MeetingExtraction) -> None:
         st.session_state.messages.append({"role": "assistant", "content": content})
 
 
+def show_model_snapshot(label: str, model: str, extraction: MeetingExtraction) -> None:
+    st.markdown(f"### {label}")
+    st.caption(model)
+    metrics = st.columns(3)
+    metrics[0].metric("Actions", len(extraction.actions))
+    metrics[1].metric("Decisions", len(extraction.decisions))
+    metrics[2].metric("Questions", len(extraction.open_questions))
+    st.markdown("**Summary**")
+    st.write(extraction.summary)
+
+    rows = [
+        *({"Type": "Action", "ID": item.id, "Result": item.task} for item in extraction.actions),
+        *(
+            {"Type": "Decision", "ID": item.id, "Result": item.summary}
+            for item in extraction.decisions
+        ),
+        *(
+            {"Type": "Question", "ID": item.id, "Result": item.question}
+            for item in extraction.open_questions
+        ),
+    ]
+    if rows:
+        st.dataframe(rows, hide_index=True, width="stretch")
+    else:
+        st.caption("No actions, decisions, or open questions were extracted.")
+
+
+def model_lab_panel(
+    transcript_text: str,
+    title: str,
+    strategy: ExtractionStrategy,
+    baseline: MeetingExtraction,
+) -> None:
+    st.subheader("Model Lab")
+    st.caption("Compare the production baseline with an experimental trained deployment.")
+    trained_model = os.getenv(TRAINED_MODEL_ENV, "").strip()
+    if strategy is ExtractionStrategy.DEMO:
+        st.info("Choose a Foundry-backed extraction design before comparing models.")
+        return
+    if not trained_model:
+        st.info(f"Model Lab will activate when {TRAINED_MODEL_ENV} names a deployed model.")
+        return
+
+    if st.button(
+        "Compare models",
+        icon=":material/compare_arrows:",
+        width="stretch",
+    ):
+        try:
+            with st.spinner(f"Running {trained_model} with {strategy.value}…"):
+                trained = asyncio.run(
+                    extract_meeting(
+                        transcript_text,
+                        title,
+                        strategy,
+                        model=trained_model,
+                    )
+                )
+            st.session_state.model_lab_result = {
+                "transcript": transcript_text,
+                "title": title,
+                "strategy": strategy.value,
+                "model": trained_model,
+                "extraction": trained,
+            }
+        except Exception as error:
+            st.error(f"Trained-model extraction failed: {error}")
+
+    comparison = st.session_state.get("model_lab_result")
+    comparison_is_current = comparison and all(
+        (
+            comparison.get("transcript") == transcript_text,
+            comparison.get("title") == title,
+            comparison.get("strategy") == strategy.value,
+            comparison.get("model") == trained_model,
+        )
+    )
+    if not comparison_is_current:
+        return
+
+    baseline_column, trained_column = st.columns(2, gap="large")
+    with baseline_column:
+        show_model_snapshot(
+            "Production baseline",
+            os.getenv(MODEL_ENV, DEFAULT_MODEL),
+            baseline,
+        )
+    with trained_column:
+        show_model_snapshot("Experimental model", trained_model, comparison["extraction"])
+
+
 def calendar_panel(reviewed: MeetingExtraction) -> None:
     st.subheader("Calendar preview")
     if not reviewed.actions:
@@ -617,6 +715,7 @@ def import_document(document: TranscriptDocument) -> None:
     st.session_state.review_audit = None
     st.session_state.review_approved_at = None
     st.session_state.messages = []
+    st.session_state.model_lab_result = None
     st.session_state.highlighted_lines = None
     if previous_hash == document.content_hash:
         st.info("This transcript was already imported; the existing text was refreshed.")
@@ -907,6 +1006,7 @@ with transcript_column:
         st.session_state.review_audit = None
         st.session_state.review_approved_at = None
         st.session_state.messages = []
+        st.session_state.model_lab_result = None
         st.session_state.highlighted_lines = None
         try:
             with st.spinner(f"Running {strategy.value}…"):
@@ -943,7 +1043,9 @@ with workspace_column:
                         width="stretch",
                     )
 
-        review_tab, chat_tab, calendar_tab = st.tabs(["Review", "Ask", "Calendar"])
+        review_tab, chat_tab, calendar_tab, model_lab_tab = st.tabs(
+            ["Review", "Ask", "Calendar", "Model Lab"]
+        )
         with review_tab:
             review_editor(extraction)
         reviewed = st.session_state.get("reviewed")
@@ -957,3 +1059,5 @@ with workspace_column:
                 calendar_panel(reviewed)
             else:
                 st.info("Approve the reviewed record to prepare a calendar event.")
+        with model_lab_tab:
+            model_lab_panel(transcript_text, title, strategy, extraction)
