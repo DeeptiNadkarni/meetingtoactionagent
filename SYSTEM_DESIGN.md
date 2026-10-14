@@ -438,6 +438,12 @@ and invokes the trained deployment through an explicit model override. It does n
 `FOUNDRY_MODEL`, write training data, or affect the normal extraction, review, Ask, or calendar
 paths.
 
+DeveloperTier deployments are deleted after a fixed 24-hour lifetime, but deletion does not
+remove the trained artifact. The external Consumption Logic App `logic-mta-model-recovery`
+checks every 15 minutes and recreates `meeting-to-action-sft-v1` from the exact step-48 artifact
+at capacity 50 when it is absent. This retains the no-hosting-fee experimental tier instead of
+using the considered GlobalStandard alternative at approximately $1.70/hour continuously.
+
 - The evaluation code rejects a missing judge deployment or one with the same name as the
   generation deployment.
 
@@ -500,6 +506,9 @@ flowchart LR
 - The Container App system identity has `Foundry User` at project scope and `AcrPull` at registry
     scope, plus `Cognitive Services Speech User` at AI account scope; none of these assignments is
     subscription- or resource-group-scoped.
+- The recovery Logic App has a separate system identity with `Cognitive Services OpenAI
+    Contributor` scoped only to the AI account. The Container App identity cannot create or
+    update model deployments.
 - Microsoft Graph uses delegated permissions so access follows the signed-in user.
 - Azure Blob access requires the Storage Blob Data Reader role.
 - Google and Zoom use provider-specific OAuth credentials and least-privilege read scopes.
@@ -549,6 +558,7 @@ flowchart TB
     FoundryProject[Microsoft Foundry project]
     Generation[gpt-5.4-mini]
     Trained[meeting-to-action-sft-v1\nModel Lab only]
+    Recovery[Consumption Logic App\n15-minute recovery check]
     Speech[Azure Speech endpoint]
         Logs[Existing Log Analytics workspace]
 
@@ -558,6 +568,7 @@ flowchart TB
         Identity -->|Foundry User| FoundryProject
     FoundryProject --> Generation
     FoundryProject --> Trained
+    Recovery -->|Managed identity GET/PUT| Trained
         Identity -->|Speech User| Speech
         Streamlit -. Runtime logs .-> Logs
 ```
@@ -577,6 +588,7 @@ flowchart TB
 | Active image | `crmtanlmcnaciof.azurecr.io/ai-foundry-starter-basic/web-meetingtoaction:azd-deploy-1791970619` |
 | Speech | Account endpoint configured without an API key; managed-identity synthetic WAV transcription verified |
 | Model Lab | Step-48 deployment `Succeeded`; direct grounded single-pass inference verified; production routing unchanged |
+| Model recovery | `logic-mta-model-recovery`; enabled 15-minute recurrence; account-scoped managed identity; successful no-op live run |
 
 Local development remains available at `localhost:8501` and uses `AzureCliCredential`. Hosted
 Google, Zoom, and delegated Microsoft connector flows are not enabled until server-safe OAuth
@@ -614,6 +626,8 @@ same endpoint with Azure CLI RBAC or an optional key that remains outside source
 | Empty, oversized, unsupported, or speaker-invalid media | Reject before calling Azure Speech. |
 | Azure Speech returns no phrases | Reject the import instead of creating an empty transcript. |
 | Experimental deployment absent or throttled | Keep production paths unchanged and surface a Model Lab-specific error. |
+| DeveloperTier reaches its 24-hour lifetime | External Logic App detects the absent deployment within 15 minutes, recreates the exact step-48 artifact at capacity 50, and verifies it. |
+| Recovery workflow or RBAC failure | Production paths remain unchanged; Model Lab stays unavailable until the next successful recurrence or operator repair. |
 | Calendar not approved | Do not invoke the provider action. |
 | Session/process loss | Current in-memory work is lost unless exported. |
 
@@ -621,6 +635,12 @@ The model calls currently have no application-level queue, retry budget, circuit
 durable checkpoint. Production hardening should add bounded retries for transient errors,
 request-level timeouts, idempotency for external writes, structured telemetry, and clear recovery
 messages.
+
+The recovery workflow was deployed and verified on October 14, 2026. Its system identity
+`e94cf1f9-73a2-4ec8-9a63-c17e6f0fde2f` has `Cognitive Services OpenAI Contributor` at the AI
+account scope. An invoked recurrence run succeeded: the deployment GET returned `OK`, and the PUT
+and post-create GET were skipped because no recovery was required. No destructive deletion was
+performed; natural end-to-end recreation remains observable after the next DeveloperTier expiry.
 
 ## 13. Observability
 

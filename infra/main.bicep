@@ -62,6 +62,12 @@ param webFoundryModel string = 'gpt-5.4-mini'
 @description('Optional fine-tuned model deployment exposed only in Model Lab')
 param webFoundryTrainedModel string = ''
 
+@description('Fine-tuned model artifact used to recover the expiring DeveloperTier deployment')
+param webFoundryTrainedModelArtifact string = ''
+
+@description('Enable scheduled recovery for the expiring Model Lab DeveloperTier deployment')
+param enableTrainedModelRecovery bool = false
+
 @description('Optional. Name of an existing AI Services account within the resource group. If not provided, a new one will be created.')
 param aiFoundryResourceName string = ''
 
@@ -256,6 +262,19 @@ module webRoleAssignments 'core/host/web-role-assignments.bicep' = {
   }
 }
 
+module trainedModelRecovery 'core/ai/developer-tier-recovery.bicep' = if (enableTrainedModelRecovery && !empty(webFoundryTrainedModel) && !empty(webFoundryTrainedModelArtifact)) {
+  scope: rg
+  name: 'trained-model-recovery'
+  params: {
+    name: 'logic-mta-model-recovery'
+    location: location
+    tags: tags
+    aiServicesAccountName: useExistingAiProject ? existingAiProject.outputs.aiServicesAccountName : aiProject.outputs.aiServicesAccountName
+    deploymentName: webFoundryTrainedModel
+    modelName: webFoundryTrainedModelArtifact
+  }
+}
+
 // Resources
 output AZURE_RESOURCE_GROUP string = resourceGroupName
 output AZURE_AI_ACCOUNT_ID string = useExistingAiProject ? existingAiProject.outputs.accountId : aiProject.outputs.accountId
@@ -280,6 +299,7 @@ output AZURE_CONTAINER_REGISTRY_NAME string = webRegistry.outputs.name
 output AZURE_CONTAINER_REGISTRY_RESOURCE_ID string = webRegistry.outputs.id
 output WEB_URL string = webContainerApp.outputs.url
 output SERVICE_WEB_NAME string = webContainerApp.outputs.name
+output TRAINED_MODEL_RECOVERY_NAME string = enableTrainedModelRecovery && !empty(webFoundryTrainedModel) && !empty(webFoundryTrainedModelArtifact) ? trainedModelRecovery.outputs.name : ''
 
 // Bing Search
 output BING_GROUNDING_CONNECTION_NAME  string = useExistingAiProject ? existingAiProject.outputs.dependentResources.bing_grounding.connectionName : aiProject.outputs.dependentResources.bing_grounding.connectionName

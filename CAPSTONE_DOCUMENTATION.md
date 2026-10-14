@@ -265,6 +265,23 @@ The step-48 `meeting-to-action-sft-v1` deployment was also restored on `Develope
 exact supplied quote, proving that the experimental Model Lab backend was callable after
 deployment rather than merely present as a UI control.
 
+DeveloperTier is deliberately temporary: Azure deletes each deployment after a fixed 24-hour
+lifetime, while the trained model artifact remains reusable. A separate Azure Consumption Logic
+App, `logic-mta-model-recovery`, checks the deployment every 15 minutes. If it is absent, the
+workflow recreates `meeting-to-action-sft-v1` from the exact step-48 artifact with DeveloperTier
+capacity 50 and verifies the result. The workflow uses a dedicated system-assigned identity with
+`Cognitive Services OpenAI Contributor` scoped only to the AI account; the public Container App
+identity retains no deployment-write access. This design avoids the approximately $1.70/hour
+continuous hosting cost of the considered GlobalStandard alternative and adds only low-volume
+Consumption Logic App execution cost.
+
+Deployment and live verification completed on October 14, 2026. The scheduler was enabled with
+the expected 15-minute recurrence, its account-scoped role assignment was present, and an invoked
+run succeeded. `Check_deployment` returned `OK`; `Recreate_deployment` and `Verify_deployment`
+were skipped because the trained deployment was already present. The current deployment was not
+deleted for a destructive recovery test; natural recreation can be confirmed after its next
+scheduled DeveloperTier expiration.
+
 <div style="page-break-after: always;"></div>
 
 ## 4. Evaluation and Testing
@@ -302,7 +319,9 @@ tokens, and 336,000 billed tokens. Its final model ID was
 Validation evidence favored the deployable `:ckpt-step-48` checkpoint over the final step 96 model.
 Their validation losses were `0.3387` and `0.3543`, respectively. The best raw validation loss,
 `0.1937` at step 95, was not a deployable checkpoint. Developer capacity is intended for
-low-volume experiments, has no SLA, and is subject to much lower request limits than production.
+low-volume experiments, has no SLA, is automatically deleted after 24 hours, and is subject to
+much lower request limits than production. The external recovery scheduler restores the exact
+validated checkpoint after deletion; it does not make DeveloperTier a production-grade service.
 
 The frozen promotion test compared pretrained base `gpt-4.1-mini` with that SFT checkpoint using
 the single-model architecture. It did not compare the checkpoint directly with production
@@ -483,7 +502,8 @@ and browser checks for all source modes, advanced tabs, approval gates, and layo
 - Speech quality, diarization, timestamps, and live-versus-batch agreement need a separately
     annotated speech benchmark before production quality claims can be made.
 - The trained Model Lab deployment uses an experimental Developer tier with no SLA and strict
-    throughput limits; it is not a production fallback.
+    throughput limits; its 24-hour deployment is restored by a 15-minute external scheduler, but
+    it is not a production fallback.
 - The live endpoint is public and unauthenticated, so access control, quotas, and transcript
     retention are not yet suitable for enterprise traffic.
 - Delegated Microsoft, Google, and Zoom connectors require server-safe OAuth callback and token

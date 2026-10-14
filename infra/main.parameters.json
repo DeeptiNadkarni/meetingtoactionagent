@@ -29,6 +29,12 @@
       "webFoundryTrainedModel": {
         "value": "${FOUNDRY_TRAINED_MODEL=}"
       },
+      "webFoundryTrainedModelArtifact": {
+        "value": "${FOUNDRY_TRAINED_MODEL_ARTIFACT=}"
+      },
+      "enableTrainedModelRecovery": {
+        "value": "${ENABLE_TRAINED_MODEL_RECOVERY=false}"
+      },
       "principalId": {
         "value": "${AZURE_PRINCIPAL_ID}"
       },

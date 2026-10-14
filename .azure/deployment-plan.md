@@ -258,6 +258,33 @@ session expired on 2026-09-27, so fresh interactive MFA is required before valid
 
 ### Advanced Single-Meeting Public Update: Validation (2026-10-14)
 - [x] All validation checks pass
+
+### DeveloperTier Recovery Scheduler: Validation (2026-10-14)
+- [x] All validation checks pass
+	- [x] 1. Core Validation (CLI, auth, build, validate, what-if)
+	- [x] 2. Linting (optional)
+	- [x] 3. Azure Policy Validation
+
+Validation proof:
+- `az bicep build --file infra/main.bicep --stdout` succeeded.
+- Targeted `az deployment group validate` succeeded for `developer-tier-recovery.bicep`.
+- Targeted what-if proposed two creates: `logic-mta-model-recovery` and its account-scoped role assignment; zero modifications and zero deletions.
+- Assigned policies were reviewed. East US 2 is permitted; MFA write enforcement applies to the interactive deployment, and Security Center assignments are audit-only for this change.
+- Project build verification passed: Python compilation succeeded and all 70 tests passed.
+
+Role assignment verification:
+- Status: Verified.
+- Identity: system-assigned identity of `logic-mta-model-recovery`.
+- Role: `Cognitive Services OpenAI Contributor` (`a001fd3d-188f-4b5d-821b-7da978bf7442`), which includes deployment read/write operations.
+- Scope: the individual `ai-account-nlmcnaciofa6y` AI Services account.
+- The public Container App identity is unchanged and does not receive model-deployment write access.
+
+### DeveloperTier Recovery Scheduler: Deployment (2026-10-14)
+- [x] Deploy the standalone recovery module without reprovisioning existing application resources
+- [x] Verify the workflow identity and enabled 15-minute recurrence
+- [x] Verify the live account-scoped `Cognitive Services OpenAI Contributor` assignment
+- [x] Invoke a non-destructive run while the trained deployment exists
+- [x] Confirm the deployment check succeeds and recreation is skipped
 	- [x] 1. AZD Installation
 	- [x] 2. Schema Validation
 	- [x] 3. Environment Setup
@@ -306,6 +333,10 @@ session expired on 2026-09-27, so fresh interactive MFA is required before valid
 | Advanced package | `azd package --no-prompt` and Docker context review | Pass: web service packaged; local credentials, Azure state, tests, evaluation, and generated documents excluded | 2026-10-14 |
 | Advanced target inventory | Existing environment and `azd-service-name=web` checks | Pass: one succeeded Container Apps environment and one tagged Container App; no duplicate target | 2026-10-14 |
 | Advanced static RBAC | Review `web-role-assignments.bicep` against application data operations | Pass: AcrPull at registry, Azure AI User at project, and Cognitive Services Speech User at AI account scope | 2026-10-14 |
+| Recovery scheduler deployment | `az deployment group create --name deploy-mta-model-recovery-20261014` with the standalone recovery module | Pass: `Succeeded`; workflow and account-scoped role assignment created | 2026-10-14 |
+| Recovery scheduler configuration | ARM GET for `logic-mta-model-recovery` | Pass: enabled, system identity `e94cf1f9-73a2-4ec8-9a63-c17e6f0fde2f`, recurrence every 15 minutes | 2026-10-14 |
+| Recovery live RBAC | Azure role assignment query at the AI account scope | Pass: workflow identity has `Cognitive Services OpenAI Contributor` | 2026-10-14 |
+| Recovery workflow run | Invoke `Check_every_15_minutes` and inspect run actions | Pass: run `08584096167061196864753394871CU56` succeeded; check `OK`; recreate and verify skipped | 2026-10-14 |
 
 ### Role Assignment Verification
 
@@ -356,6 +387,17 @@ session expired on 2026-09-27, so fresh interactive MFA is required before valid
 - Browser verification: all four clarified ingestion modes rendered, production extraction returned one action, one decision, and one open question, Model Lab rendered its single-pass comparison control, and no alerts or horizontal overflow were present.
 - Hosted Speech verification: a non-sensitive synthetic WAV was transcribed through the public app using managed identity.
 - Latest revision logs show successful Streamlit startup with no authentication, application, or unclosed-session errors.
+
+### DeveloperTier Recovery Deployment Verification
+
+- Targeted ARM deployment `deploy-mta-model-recovery-20261014` completed with provisioning state `Succeeded`.
+- Created only `logic-mta-model-recovery` and its role assignment; the public Container App, AI account, and existing model deployments were not reprovisioned.
+- Workflow state is enabled with a 15-minute recurrence.
+- System identity: `e94cf1f9-73a2-4ec8-9a63-c17e6f0fde2f`.
+- Live RBAC: `Cognitive Services OpenAI Contributor` scoped to `ai-account-nlmcnaciofa6y`.
+- Live run `08584096167061196864753394871CU56` succeeded. `Check_deployment` returned `OK`; `Recreate_deployment` and `Verify_deployment` were skipped because `meeting-to-action-sft-v1` existed.
+- No destructive deletion was performed. End-to-end recreation will be observed after the next natural 24-hour DeveloperTier expiration.
+- Public site and `/_stcore/health` remained available after deployment; the health response was `ok`.
 
 **Validated by:** azure-validate workflow
 **Website validation timestamp:** 2026-09-27T12:36:20Z

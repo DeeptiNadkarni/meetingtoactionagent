@@ -39,6 +39,16 @@ checkpoint on `DeveloperTier` capacity 50. A direct structured inference returne
 action with the exact source quote, confirming that the Model Lab backend is callable rather than
 only configured in the UI.
 
+DeveloperTier deployments have a fixed 24-hour lifetime and are automatically deleted; the
+fine-tuned model artifact remains available for a new deployment. The Consumption Logic App
+`logic-mta-model-recovery` checks `meeting-to-action-sft-v1` every 15 minutes and recreates it from
+the exact step-48 artifact on DeveloperTier capacity 50 when the deployment is absent. Its
+system-assigned identity has `Cognitive Services OpenAI Contributor` only on the AI account. The
+public application identity has no deployment-write permission. This avoids continuous model
+hosting charges; only low-volume Consumption Logic App executions are added. A live verification
+run succeeded on October 14, 2026: the deployment check returned `OK`, and the create and verify
+actions were skipped because the deployment already existed.
+
 The production path remains `gpt-5.4-mini`. Model Lab uses the separate
 `FOUNDRY_TRAINED_MODEL=meeting-to-action-sft-v1` override and never changes normal extraction,
 Ask, review, or downstream workflow routing.
