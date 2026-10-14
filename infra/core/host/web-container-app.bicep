@@ -24,6 +24,9 @@ param foundryModel string
 @description('Optional fine-tuned model deployment used by Model Lab')
 param foundryTrainedModel string = ''
 
+@description('Azure Speech endpoint used for recording transcription')
+param speechEndpoint string
+
 var trainedModelEnvironment = empty(foundryTrainedModel) ? [] : [
   {
     name: 'FOUNDRY_TRAINED_MODEL'
@@ -94,6 +97,10 @@ resource containerApp 'Microsoft.App/containerApps@2025-01-01' = {
             {
               name: 'FOUNDRY_MODEL'
               value: foundryModel
+            }
+            {
+              name: 'AZURE_SPEECH_ENDPOINT'
+              value: speechEndpoint
             }
           ], trainedModelEnvironment)
           resources: {

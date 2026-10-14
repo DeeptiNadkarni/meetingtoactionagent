@@ -2,7 +2,11 @@ from email.message import EmailMessage
 
 import pytest
 
-from meeting_to_action.ingestion import MAX_TRANSCRIPT_BYTES, parse_uploaded_transcript
+from meeting_to_action.ingestion import (
+    MAX_TRANSCRIPT_BYTES,
+    parse_context_document,
+    parse_uploaded_transcript,
+)
 
 
 def test_text_upload_has_stable_hash_and_metadata() -> None:
@@ -69,3 +73,14 @@ def test_upload_rejects_unsupported_and_oversized_files() -> None:
         parse_uploaded_transcript("meeting.pdf", b"content")
     with pytest.raises(ValueError, match="10 MB"):
         parse_uploaded_transcript("meeting.txt", b"x" * (MAX_TRANSCRIPT_BYTES + 1))
+
+
+def test_context_document_is_separate_from_transcript_evidence() -> None:
+    document = parse_context_document(
+        "Launch agenda.txt",
+        b"Agenda\nReview launch readiness\nConfirm the launch brief owner",
+    )
+
+    assert document.title == "Launch agenda"
+    assert document.text.startswith("Agenda")
+    assert len(document.content_hash) == 64

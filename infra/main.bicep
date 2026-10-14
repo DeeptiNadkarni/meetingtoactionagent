@@ -238,6 +238,7 @@ module webContainerApp 'core/host/web-container-app.bicep' = {
     foundryProjectEndpoint: useExistingAiProject ? existingAiProject.outputs.FOUNDRY_PROJECT_ENDPOINT : aiProject.outputs.FOUNDRY_PROJECT_ENDPOINT
     foundryModel: webFoundryModel
     foundryTrainedModel: webFoundryTrainedModel
+    speechEndpoint: 'https://${useExistingAiProject ? existingAiProject.outputs.aiServicesAccountName : aiProject.outputs.aiServicesAccountName}.cognitiveservices.azure.com/'
   }
 }
 

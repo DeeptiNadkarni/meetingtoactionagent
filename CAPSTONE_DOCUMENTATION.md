@@ -8,6 +8,27 @@
 
 ---
 
+## Advanced single-meeting branch addendum
+
+The separate `feature/advanced-single-meeting` branch adds audio/video and successive microphone
+clip transcription through Azure Speech, speaker/timestamp segments, optional agenda/PDF/DOCX
+context, deterministic quality and conflict explanations, actor-attributed correction history,
+an evidence-linked playback timeline, and approval-gated Outlook/Teams workflow previews. It does
+not add cross-meeting storage, alter the public Container App revision, or route normal production
+traffic to the fine-tuned model.
+
+Transcript quotes and line ranges remain the only evidence that a meeting outcome occurred.
+Supporting documents can explain alignment but cannot create actions or decisions. Outlook Graph
+integration creates saved `/me/messages` drafts only after explicit approval and has no automatic
+send path. Teams output is a user-opened deep link or downloaded Adaptive Card preview.
+
+Advanced evaluation is separated from the Foundry extraction judge: word error rate, timestamp
+mean absolute error, diarization label accuracy, conflict-pair precision/recall/F1, and
+live-versus-batch agreement are deterministic and require an annotated speech set before making
+production quality claims.
+
+---
+
 ## 1. Project Overview
 
 ### Problem statement

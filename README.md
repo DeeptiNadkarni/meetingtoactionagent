@@ -95,6 +95,35 @@ After extraction, deterministic validation rejects quotes outside their declared
 lines and repairs supported line-range mismatches. Human review preserves the source evidence,
 records field-level changes in a downloadable audit, and gates grounded Q&A and calendar actions.
 
+## Advanced single-meeting experience
+
+The `feature/advanced-single-meeting` branch extends the same one-meeting workflow without adding
+cross-meeting persistence or changing the production model:
+
+- **Recording ingestion:** Azure Speech fast transcription accepts common audio/video formats,
+   returns speaker labels, candidate-language detection, and phrase timestamps. Configure an
+   existing `AZURE_SPEECH_ENDPOINT`; use managed identity or Azure CLI RBAC where possible, or
+   provide `AZURE_SPEECH_API_KEY` for local development. The app does not provision Speech.
+- **Live meeting mode:** Streamlit records successive microphone clips, transcribes each clip,
+   appends timestamped segments, and lets the user extract the current meeting state. This is a
+   turn-based near-real-time mode, not a background meeting bot.
+- **Agenda/document context:** optional TXT, DOCX, and PDF files are parsed into separate context
+   records. Deterministic alignment findings can cite them, but they can never prove that an
+   action or decision occurred; transcript evidence remains authoritative.
+- **Quality and conflicts:** deterministic findings explain missing owners/deadlines, similar
+   actions with conflicting assignments, and supporting-context alignment. The UI intentionally
+   avoids invented confidence percentages.
+- **Interactive correction:** the field editor records reviewer, timestamp, before/after values,
+   record ID, and field while preserving immutable transcript evidence.
+- **Timeline:** extracted actions, decisions, and questions map evidence lines back to speech
+   segments. Uploaded recording playback can seek to the selected event timestamp.
+- **Outlook and Teams:** reviewed actions produce Outlook compose links, Teams chat deep links,
+   and downloadable Adaptive Card previews. Delegated Graph can create a saved Outlook draft
+   through `/me/messages`; no code path sends it automatically.
+
+All advanced data remains in Streamlit session state. No database or multi-meeting tracker is
+introduced.
+
 ## Run locally
 
 1. Use Python 3.12 and install dependencies:
@@ -107,6 +136,10 @@ The deterministic demo strategy works without Foundry. The other three strategie
 deployed model and reject evidence quotes or normalized deadline years not present in the
 transcript.
 
+Recording and live modes additionally require `AZURE_SPEECH_ENDPOINT` and the **Cognitive
+Services Speech User** role for the local/Azure identity. `AZURE_SPEECH_API_KEY` is supported for
+local development but should not be stored in source control.
+
 ## Transcript sources
 
 Select a source in the sidebar. Paste and file upload work without provider configuration.
@@ -118,7 +151,7 @@ Remote sources are read-only and activate only when their environment variables 
 
 - **Microsoft 365:** Register a Microsoft Entra public client application, enable public client
    flows, and add delegated `Files.Read`, `Calendars.Read`, `OnlineMeetings.Read`,
-   `OnlineMeetingTranscript.Read.All`, and `Mail.Read` Microsoft Graph permissions. Set
+   `OnlineMeetingTranscript.Read.All`, and `Mail.ReadWrite` Microsoft Graph permissions. Set
    `MICROSOFT_CLIENT_ID` and optionally `MICROSOFT_TENANT_ID`. Device sign-in covers OneDrive,
    SharePoint drives, Teams calendar meetings/transcripts, and Outlook attachments. Teams
    transcript access requires a work or school account, an unexpired meeting, and tenant-enabled
@@ -148,6 +181,11 @@ Outlook / Microsoft 365 and Yahoo open a prefilled event draft in the selected p
 signed-in user reviews and saves it there. Apple Calendar, Thunderbird, Proton Calendar, and
 other clients can use the `.ics` download. These draft/download paths do not collect provider
 credentials and do not send invitations automatically.
+
+The Workflows tab prepares Outlook message and Teams chat follow-ups from an approved action.
+Opening provider links and downloading an Adaptive Card require explicit UI approval. Creating a
+saved Outlook draft additionally requires delegated `Mail.ReadWrite`; the Graph adapter calls
+`/me/messages` only and never `/send`.
 
 ## Fine-tuning pilot and public dataset disclosure
 
@@ -228,6 +266,11 @@ Synthetic unit-test fixtures and manually entered demonstration transcripts are 
 public datasets.
 
 ## Evaluate architectures
+
+`meeting_to_action/advanced_evaluation.py` provides model-free metrics for the advanced surface:
+word error rate, timestamp boundary mean absolute error, diarization label accuracy independent
+of arbitrary speaker labels, conflict-pair precision/recall/F1, and live-versus-batch agreement.
+These metrics require a separately annotated speech test set before any production quality claim.
 
 Set `FOUNDRY_JUDGE_MODEL` to a deployed model different from `FOUNDRY_MODEL`, then run
 `python -m meeting_to_action.evaluation`. The default run evaluates the six frozen test meetings;

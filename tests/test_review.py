@@ -1,7 +1,9 @@
 from pydantic import BaseModel
 
 from meeting_to_action.models import ActionItem, Evidence, MeetingExtraction, MeetingNote
-from meeting_to_action.review import apply_review_edits, build_change_audit
+from datetime import UTC, datetime
+
+from meeting_to_action.review import apply_review_edits, build_change_audit, build_correction_events
 
 
 def test_review_edits_preserve_grounded_evidence() -> None:
@@ -140,3 +142,22 @@ def test_change_audit_includes_only_edited_fields() -> None:
             "after": "confirmed",
         },
     ]
+
+
+def test_change_audit_becomes_actor_timestamped_correction_history() -> None:
+    changed_at = datetime(2026, 4, 1, 15, 30, tzinfo=UTC)
+    events = build_correction_events(
+        [{
+            "record_type": "Action",
+            "record_id": "A1",
+            "field": "owner",
+            "before": None,
+            "after": "Maya",
+        }],
+        actor="Deepti",
+        changed_at=changed_at,
+    )
+
+    assert events[0].actor == "Deepti"
+    assert events[0].changed_at == changed_at
+    assert events[0].after == "Maya"

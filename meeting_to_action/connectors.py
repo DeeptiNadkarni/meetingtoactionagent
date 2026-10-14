@@ -23,7 +23,7 @@ MICROSOFT_SCOPES = [
     "Calendars.Read",
     "OnlineMeetings.Read",
     "OnlineMeetingTranscript.Read.All",
-    "Mail.Read",
+    "Mail.ReadWrite",
 ]
 GOOGLE_SCOPES = [
     "https://www.googleapis.com/auth/drive.readonly",
@@ -82,6 +82,16 @@ class MicrosoftGraphConnector:
 
     def _get_json(self, path: str, **kwargs: Any) -> dict[str, Any]:
         response = self.session.get(f"{GRAPH_ROOT}{path}", headers=self.headers, timeout=30, **kwargs)
+        self._raise(response)
+        return dict(response.json())
+
+    def _post_json(self, path: str, body: dict[str, Any]) -> dict[str, Any]:
+        response = self.session.post(
+            f"{GRAPH_ROOT}{path}",
+            headers={**self.headers, "Content-Type": "application/json"},
+            json=body,
+            timeout=30,
+        )
         self._raise(response)
         return dict(response.json())
 
@@ -219,6 +229,11 @@ class MicrosoftGraphConnector:
         self._raise(response)
         parsed = parse_uploaded_transcript(item.name, response.content, response.headers.get("Content-Type"))
         return _as_source(parsed, TranscriptSource.EMAIL, item.id)
+
+    def create_mail_draft(self, message: dict[str, Any], *, approved: bool) -> dict[str, Any]:
+        if not approved:
+            raise PermissionError("Outlook draft creation requires explicit approval")
+        return self._post_json("/me/messages", message)
 
 
 class AzureBlobConnector:

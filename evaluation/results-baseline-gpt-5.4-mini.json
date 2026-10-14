@@ -1,0 +1,1313 @@
+[
+  {
+    "case": "ami-ts3011b",
+    "strategy": "Single model",
+    "entity_f1": 0.0,
+    "semantic_entity_f1": 0.0625,
+    "grounding_rate": 1.0,
+    "latency_seconds": 16.583,
+    "model_calls": 1,
+    "generation_model": "gpt-5.4-mini",
+    "judge_correctness": 5,
+    "judge_completeness": 4,
+    "judge_grounding": 5,
+    "judge_average": 4.67,
+    "judge_rationale": "The extraction contains no invented facts and all actions, decisions, and questions are well grounded with accurate supporting evidence. Owners are correctly assigned based on in-meeting commitments. However, the candidate is missing some substantive actions and decisions from the reference\u2014for example, the project manager adding the minutes to the project folder, and some decisions regarding cost-saving through sparse use of LEDs or preference for sound as feedback. The summary is accurate but omits details about discussion of dual channel watch, speech recognition, and target group expansion. The warnings suggest removal of only unsupported evidence, not fabricated content.",
+    "judge_model_calls": 1,
+    "judge_model": "gpt-4.1-judge",
+    "candidate_extraction": {
+      "title": "AMI meeting TS3011b",
+      "meeting_date": null,
+      "summary": "The group discussed adding lighting and audio-based remote-control features, weighing usability against cost and technical complexity. They converged on a simpler remote with volume and programme controls, likely without the ten digit keypad, and asked for a user interface concept by the next meeting.",
+      "notes": [
+        {
+          "id": "n1",
+          "title": "Lighting and Audio Feedback Features",
+          "description": "The participants compared fancy lighting with sound-based feedback for the remote control. Sound was considered more practical than clapping detection, while some lighting ideas were discussed as alternatives or additions.",
+          "evidence": [
+            {
+              "quote": "the money we save on using this we can use uh for elaborate fancy lighting uh techniques, blinking LEDs and all that kind of fancy stuff.",
+              "line_start": 2,
+              "line_end": 3
+            },
+            {
+              "quote": "And do we even uh prefer the sound above the the LEDs, the lightning uh function?",
+              "line_start": 45,
+              "line_end": 45
+            }
+          ]
+        },
+        {
+          "id": "n2",
+          "title": "Remote Control Button Layout",
+          "description": "The meeting moved toward a simpler button layout for the remote control. Volume and programme selection were identified as the most important functions, while the ten-digit keypad was questioned and possibly dropped.",
+          "evidence": [
+            {
+              "quote": "but I want um the kind of functions, for example uh th the most important are volume and uh programme selecting.",
+              "line_start": 55,
+              "line_end": 57
+            },
+            {
+              "quote": "It should be an easy interface with not so much buttons. S just a a p a p a volume and a programme one.",
+              "line_start": 101,
+              "line_end": 101
+            }
+          ]
+        },
+        {
+          "id": "n3",
+          "title": "Recharge Cradle Consideration",
+          "description": "A recharge cradle was proposed as a way to reduce problems with power management. The group did not resolve the design, but Sebastian said he would find out whether it was feasible.",
+          "evidence": [
+            {
+              "quote": "if we could inc uh include a c a cradle in which it could recharge, then there wouldn't be uh a big problem.",
+              "line_start": 87,
+              "line_end": 87
+            },
+            {
+              "quote": "I'll have to find that out.",
+              "line_start": 88,
+              "line_end": 88
+            }
+          ]
+        },
+        {
+          "id": "n4",
+          "title": "User Interface Concept Request",
+          "description": "The chair asked for the user interface concept to be delivered for the next meeting. The minutes would also be placed in the project documents folder for later reference.",
+          "evidence": [
+            {
+              "quote": "Um I will put the minutes I just made in the project documents folder.",
+              "line_start": 93,
+              "line_end": 93
+            },
+            {
+              "quote": "User Interface Designer, uh Roo, I would like to see the user interface c uh concept.",
+              "line_start": 98,
+              "line_end": 98
+            }
+          ]
+        }
+      ],
+      "actions": [
+        {
+          "id": "a1",
+          "task": "Look into a solution for supporting the remote-control function within cost constraints.",
+          "owner": "Sebastian",
+          "deadline_text": null,
+          "deadline": null,
+          "status": "proposed",
+          "evidence": [
+            {
+              "quote": "maybe Sebastian should have uh a detailed look later on and um come up with a solution,",
+              "line_start": 39,
+              "line_end": 39
+            },
+            {
+              "quote": "I will.",
+              "line_start": 40,
+              "line_end": 40
+            }
+          ]
+        },
+        {
+          "id": "a2",
+          "task": "Find out whether a recharge cradle can be included.",
+          "owner": "Sebastian",
+          "deadline_text": null,
+          "deadline": null,
+          "status": "proposed",
+          "evidence": [
+            {
+              "quote": "if we could inc uh include a c a cradle in which it could recharge, then there wouldn't be uh a big problem.",
+              "line_start": 87,
+              "line_end": 87
+            },
+            {
+              "quote": "I'll have to find that out.",
+              "line_start": 88,
+              "line_end": 88
+            }
+          ]
+        },
+        {
+          "id": "a3",
+          "task": "Provide the user interface concept at the next meeting.",
+          "owner": "User Interface Designer",
+          "deadline_text": null,
+          "deadline": null,
+          "status": "proposed",
+          "evidence": [
+            {
+              "quote": "I would like to receive the uh components concept.",
+              "line_start": 95,
+              "line_end": 95
+            },
+            {
+              "quote": "User Interface Designer, uh Roo, I would like to see the user interface c uh concept.",
+              "line_start": 98,
+              "line_end": 98
+            }
+          ]
+        }
+      ],
+      "decisions": [
+        {
+          "id": "d1",
+          "summary": "The remote control should support a special function if it can be implemented within cost constraints.",
+          "rationale": "The group agreed in principle, but only if the added function stays within budget and remains feasible.",
+          "evidence": [
+            {
+              "quote": "we do agree on on the thing that the remote should have such a function, if it's possible within the costs and all that kind of things.",
+              "line_start": 36,
+              "line_end": 36
+            }
+          ]
+        },
+        {
+          "id": "d2",
+          "summary": "The remote control should remain simple, with volume and programme controls prioritized over a full keypad.",
+          "rationale": "Participants explicitly emphasized keeping the interface easy and identified volume and programme selection as the key functions.",
+          "evidence": [
+            {
+              "quote": "It should be an easy interface with not so much buttons. S just a a p a p a volume and a programme one.",
+              "line_start": 101,
+              "line_end": 101
+            }
+          ]
+        }
+      ],
+      "open_questions": [
+        {
+          "id": "q1",
+          "question": "Should the remote-control feature use sound feedback or LED lighting?",
+          "owner": null,
+          "evidence": [
+            {
+              "quote": "And do we even uh prefer the sound above the the LEDs, the lightning uh function?",
+              "line_start": 45,
+              "line_end": 45
+            }
+          ]
+        },
+        {
+          "id": "q2",
+          "question": "Should the ten-digit keypad be dropped from the remote control?",
+          "owner": null,
+          "evidence": [
+            {
+              "quote": "And and do we want um the ten digits?",
+              "line_start": 62,
+              "line_end": 62
+            },
+            {
+              "quote": "I wouldn't buy it personally. A remote control without the ten digits.",
+              "line_start": 65,
+              "line_end": 65
+            }
+          ]
+        },
+        {
+          "id": "q3",
+          "question": "Can a recharge cradle be included in the design?",
+          "owner": null,
+          "evidence": [
+            {
+              "quote": "if we could inc uh include a c a cradle in which it could recharge, then there wouldn't be uh a big problem.",
+              "line_start": 87,
+              "line_end": 87
+            }
+          ]
+        }
+      ],
+      "warnings": [
+        "n1: removed unsupported evidence quote",
+        "n2: removed unsupported evidence quote",
+        "a3: removed a deadline not present in its evidence",
+        "d2: removed unsupported evidence quote"
+      ]
+    }
+  },
+  {
+    "case": "ami-is1005c",
+    "strategy": "Single model",
+    "entity_f1": 0.0,
+    "semantic_entity_f1": 0.0,
+    "grounding_rate": 1.0,
+    "latency_seconds": 9.398,
+    "model_calls": 1,
+    "generation_model": "gpt-5.4-mini",
+    "judge_correctness": 4,
+    "judge_completeness": 4,
+    "judge_grounding": 5,
+    "judge_average": 4.33,
+    "judge_rationale": "The candidate captures most key decisions (small LCD, banana design, infra-red) and actions with strong evidence. It omits some details, namely: it does not record the touch screen or hidden buttons/speech recognition as formal decisions, as in the reference, and does not include the actions about 'working together on a prototype.' However, all actions it does extract are well supported and not invented, and its warnings indicate removal/omission was deliberate and cautious. Open questions are well-grounded and representative. Minor details and more granular decisions are under-represented but nothing is fabricated.",
+    "judge_model_calls": 1,
+    "judge_model": "gpt-4.1-judge",
+    "candidate_extraction": {
+      "title": "AMI meeting IS1005c",
+      "meeting_date": null,
+      "summary": "The group discussed the physical design of the device, especially the screen size and shape, and agreed to move toward a smaller LCD with a shaped screen if feasible. They also talked about energy considerations for using batteries and solar cells, and about a banana-like design with hidden buttons covered by a peelable layer. Near the end, they assigned short-term work for the next meeting and asked two people to collaborate on a first prototype.",
+      "notes": [
+        {
+          "id": "N1",
+          "title": "Screen Size and Shape",
+          "description": "The participants debated the actual size of the screen and whether it should be square or shaped. They concluded that a smaller LCD would be preferable, but a shaped screen was also favored by at least one participant even though it could be more expensive.",
+          "evidence": [
+            {
+              "quote": "So let's go for a small L_C_D_.",
+              "line_start": 45,
+              "line_end": 45
+            }
+          ]
+        },
+        {
+          "id": "N2",
+          "title": "Energy and Solar Cell Feasibility",
+          "description": "The group briefly discussed energy needs and whether batteries plus a solar cell would be sufficient for speech recognition and LCD use. One participant questioned how solar cells would work if the device is used indoors.",
+          "evidence": [
+            {
+              "quote": "If we use the batteries, and the additional so solar cell, then it's okay for L_ uh speech recognition and L_C_D_,",
+              "line_start": 24,
+              "line_end": 24
+            },
+            {
+              "quote": "So if we use s solar cells, um where is the sun if someone's watching T_V_ inside?",
+              "line_start": 27,
+              "line_end": 27
+            }
+          ]
+        },
+        {
+          "id": "N3",
+          "title": "Banana Design and Hidden Controls",
+          "description": "The team discussed keeping the banana concept and making the controls hidden beneath a peelable outer layer. They compared the idea to a plastic cover that can be opened to reveal interfaces and buttons.",
+          "evidence": [
+            {
+              "quote": "So we are agree with the banana thing?",
+              "line_start": 66,
+              "line_end": 66
+            },
+            {
+              "quote": "Something like a plastic cover covering uh some interface, U_S_B_ interface as in the in uh digital camera.",
+              "line_start": 83,
+              "line_end": 84
+            }
+          ]
+        },
+        {
+          "id": "N4",
+          "title": "Prototype Work Assignment",
+          "description": "Before the next meeting, the group planned for the Industrial Manager, User Interface Manager, and Marketing Expert to handle specific deliverables. They also asked two people to work together on a first prototype and on the shape of the device.",
+          "evidence": [
+            {
+              "quote": "the Industrial Manager uh will uh will work on the look and feel design.",
+              "line_start": 90,
+              "line_end": 90
+            }
+          ]
+        }
+      ],
+      "actions": [
+        {
+          "id": "A1",
+          "task": "Work on the look and feel design",
+          "owner": "Industrial Manager",
+          "deadline_text": null,
+          "deadline": null,
+          "status": "proposed",
+          "evidence": [
+            {
+              "quote": "the Industrial Manager uh will uh will work on the look and feel design.",
+              "line_start": 90,
+              "line_end": 90
+            }
+          ]
+        },
+        {
+          "id": "A2",
+          "task": "Work on the user interface device",
+          "owner": "User Interface Manager",
+          "deadline_text": null,
+          "deadline": null,
+          "status": "proposed",
+          "evidence": [
+            {
+              "quote": "The User Interface uh uh Mana uh Manager will work on the user interface device.",
+              "line_start": 91,
+              "line_end": 91
+            }
+          ]
+        },
+        {
+          "id": "A3",
+          "task": "Do the first project evaluation",
+          "owner": "Marketing Expert",
+          "deadline_text": null,
+          "deadline": null,
+          "status": "proposed",
+          "evidence": [
+            {
+              "quote": "And the the Marketing Expert will do the first project evaluation.",
+              "line_start": 92,
+              "line_end": 92
+            }
+          ]
+        }
+      ],
+      "decisions": [
+        {
+          "id": "D1",
+          "summary": "Move forward with a smaller LCD rather than the larger 7-by-7 concept.",
+          "rationale": "Participants agreed that the original screen was too large and that a smaller LCD would be easier to fit.",
+          "evidence": [
+            {
+              "quote": "So let's go for a small L_C_D_.",
+              "line_start": 45,
+              "line_end": 45
+            },
+            {
+              "quote": "Okay, so five to ten, I I think it's it's feasible.",
+              "line_start": 39,
+              "line_end": 39
+            }
+          ]
+        },
+        {
+          "id": "D2",
+          "summary": "Keep the banana concept.",
+          "rationale": "The group explicitly asked whether they were agreeing to the banana idea and did not reject it.",
+          "evidence": [
+            {
+              "quote": "So we are agree with the banana thing?",
+              "line_start": 66,
+              "line_end": 66
+            },
+            {
+              "quote": "Mm-mm.",
+              "line_start": 68,
+              "line_end": 68
+            }
+          ]
+        },
+        {
+          "id": "D3",
+          "summary": "Use infra-red.",
+          "rationale": "The transcript states that the last point decided was infra-red.",
+          "evidence": [
+            {
+              "quote": "So, the last point we decided it's infra-red, I guess.",
+              "line_start": 69,
+              "line_end": 69
+            },
+            {
+              "quote": "Yeah, I think infra-red.",
+              "line_start": 70,
+              "line_end": 70
+            }
+          ]
+        }
+      ],
+      "open_questions": [
+        {
+          "id": "Q1",
+          "question": "Should the screen be square or shaped?",
+          "owner": null,
+          "evidence": [
+            {
+              "quote": "I'd like a shaped screen.",
+              "line_start": 62,
+              "line_end": 62
+            }
+          ]
+        },
+        {
+          "id": "Q2",
+          "question": "Can the banana-style peeling mechanism and hidden buttons be implemented technically?",
+          "owner": null,
+          "evidence": [
+            {
+              "quote": "Is it is it possible to do that?",
+              "line_start": 78,
+              "line_end": 78
+            },
+            {
+              "quote": "I think if we if we have a spongy layer on the outside of the banana then it's easy to make that,",
+              "line_start": 81,
+              "line_end": 81
+            }
+          ]
+        },
+        {
+          "id": "Q3",
+          "question": "How should the device use solar cells indoors?",
+          "owner": null,
+          "evidence": [
+            {
+              "quote": "So if we use s solar cells, um where is the sun if someone's watching T_V_ inside?",
+              "line_start": 27,
+              "line_end": 27
+            }
+          ]
+        }
+      ],
+      "warnings": [
+        "N1: removed unsupported evidence quote",
+        "N4: removed unsupported evidence quote",
+        "A1: removed a deadline not present in its evidence",
+        "A2: removed a deadline not present in its evidence",
+        "A3: removed a deadline not present in its evidence",
+        "A4: removed unsupported evidence quote",
+        "A4: omitted because it has no exact transcript evidence",
+        "Q1: removed unsupported evidence quote"
+      ]
+    }
+  },
+  {
+    "case": "ami-es2013b",
+    "strategy": "Single model",
+    "entity_f1": 0.0,
+    "semantic_entity_f1": 0.0,
+    "grounding_rate": 1.0,
+    "latency_seconds": 9.9,
+    "model_calls": 1,
+    "generation_model": "gpt-5.4-mini",
+    "judge_correctness": 4,
+    "judge_completeness": 3,
+    "judge_grounding": 5,
+    "judge_average": 4.0,
+    "judge_rationale": "The candidate extraction is well-grounded with clear evidence linking each extraction to exact transcript lines. However, it omits all decisions present in the reference, such as not working with teletext, targeting TV remotes for younger users, and required functions and design elements, which are crucial meeting outcomes. The actions mostly align but over-specify owners based on speaker names, which are not definitively mapped to real roles (Kate, Steph, etc.) in this transcript. Open questions in the candidate only partially overlap with the reference; some (like market size, solar power, rechargeable base considerations) are missing. The notes are accurate and concise but do not substitute for missing decisions. No invented facts or inaccuracies are present, but the absence of the reference's substantive records limits completeness.",
+    "judge_model_calls": 1,
+    "judge_model": "gpt-4.1-judge",
+    "candidate_extraction": {
+      "title": "AMI meeting ES2013b",
+      "meeting_date": null,
+      "summary": "The group discussed the remote control concept, focusing on cost, power options, and whether the design could fit the target price and audience. They also refined the required functions, debated combining keys to simplify the interface, and assigned individual workstreams.",
+      "notes": [
+        {
+          "id": "note-2",
+          "title": "Power Supply and Charging Ideas",
+          "description": "The group compared rechargeable internal batteries, solar power, and charging the remote after use. They concluded that solar would be impractical for night viewing and that a rechargeable battery may be more convenient long term, though cost remained a concern.",
+          "evidence": [
+            {
+              "quote": "if every time you're done using the remote you put it on a charger, then you then it has a place.",
+              "line_start": 16,
+              "line_end": 17
+            },
+            {
+              "quote": "solar may not be so good when you're watching T_V_ in the night",
+              "line_start": 23,
+              "line_end": 25
+            }
+          ]
+        },
+        {
+          "id": "note-3",
+          "title": "Function Set and Button Design",
+          "description": "The team reviewed the intended functions and agreed the remote should include power, channel, volume, an enter key, number keys, and large user-friendly buttons. They also explored streamlining the design by combining enter and power, but worried that this could make the remote too complicated.",
+          "evidence": [
+            {
+              "quote": "It has to have big user-friendly buttons",
+              "line_start": 59,
+              "line_end": 59
+            },
+            {
+              "quote": "my only comment is I think maybe um we could somehow include an enter key in like a power key if power power was enter",
+              "line_start": 61,
+              "line_end": 62
+            }
+          ]
+        },
+        {
+          "id": "note-4",
+          "title": "Assignment of Workstreams",
+          "description": "At the end of the meeting, Speaker A said they would compile minutes and assigned individual tasks to specific team members. Kate was to handle components, Steph the user interface, and another member trend-watching, with help from their coach.",
+          "evidence": [
+            {
+              "quote": "and I'll put some minutes of this meeting together.",
+              "line_start": 82,
+              "line_end": 82
+            },
+            {
+              "quote": "each of us will get help from our coach.",
+              "line_start": 86,
+              "line_end": 86
+            }
+          ]
+        }
+      ],
+      "actions": [
+        {
+          "id": "action-1",
+          "task": "Put together minutes of the meeting",
+          "owner": "Speaker A",
+          "deadline_text": null,
+          "deadline": null,
+          "status": "confirmed",
+          "evidence": [
+            {
+              "quote": "and I'll put some minutes of this meeting together.",
+              "line_start": 82,
+              "line_end": 82
+            }
+          ]
+        },
+        {
+          "id": "action-2",
+          "task": "Do the components",
+          "owner": "Kate",
+          "deadline_text": null,
+          "deadline": null,
+          "status": "confirmed",
+          "evidence": [
+            {
+              "quote": "your individual assignments are for um Kate to do the components",
+              "line_start": 83,
+              "line_end": 83
+            }
+          ]
+        },
+        {
+          "id": "action-3",
+          "task": "Do the user interface",
+          "owner": "Steph",
+          "deadline_text": null,
+          "deadline": null,
+          "status": "confirmed",
+          "evidence": [
+            {
+              "quote": "for you, Steph, to do the user interface",
+              "line_start": 83,
+              "line_end": 84
+            }
+          ]
+        },
+        {
+          "id": "action-4",
+          "task": "Do the trend-watching",
+          "owner": null,
+          "deadline_text": null,
+          "deadline": null,
+          "status": "proposed",
+          "evidence": [
+            {
+              "quote": "and for you the trend-watching.",
+              "line_start": 84,
+              "line_end": 85
+            }
+          ]
+        }
+      ],
+      "decisions": [],
+      "open_questions": [
+        {
+          "id": "question-1",
+          "question": "Can the remote be built within the required price range?",
+          "owner": null,
+          "evidence": [
+            {
+              "quote": "I'm not convinced we can put it into this box for the price that we need gonna need to hit.",
+              "line_start": 10,
+              "line_end": 10
+            },
+            {
+              "quote": "Still I don't know if it's quite within our price range.",
+              "line_start": 43,
+              "line_end": 43
+            }
+          ]
+        },
+        {
+          "id": "question-2",
+          "question": "How much would it cost to create a device with the basic elements?",
+          "owner": null,
+          "evidence": [
+            {
+              "quote": "Do we have um ki some idea of how much it would cost to create a device that has these basic elements?",
+              "line_start": 11,
+              "line_end": 11
+            }
+          ]
+        },
+        {
+          "id": "question-3",
+          "question": "How could enter be combined with power without causing accidental shutdowns?",
+          "owner": null,
+          "evidence": [
+            {
+              "quote": "how do you avoid switching the thing off when you actually wanna press enter?",
+              "line_start": 71,
+              "line_end": 71
+            },
+            {
+              "quote": "you'd have to have an off te off key.",
+              "line_start": 75,
+              "line_end": 75
+            },
+            {
+              "quote": "to turn it off you'd have to press power twice in succession",
+              "line_start": 76,
+              "line_end": 77
+            }
+          ]
+        }
+      ],
+      "warnings": [
+        "note-1: removed unsupported evidence quote",
+        "note-1: removed unsupported evidence quote",
+        "note-1: omitted because it has no exact transcript evidence",
+        "note-2: removed unsupported evidence quote",
+        "note-3: removed unsupported evidence quote",
+        "note-3: removed unsupported evidence quote",
+        "note-4: removed unsupported evidence quote",
+        "decision-1: removed unsupported evidence quote",
+        "decision-1: omitted because it has no exact transcript evidence",
+        "decision-2: removed unsupported evidence quote",
+        "decision-2: omitted because it has no exact transcript evidence"
+      ]
+    }
+  },
+  {
+    "case": "ami-es2002c",
+    "strategy": "Single model",
+    "entity_f1": 0.0,
+    "semantic_entity_f1": 0.0,
+    "grounding_rate": 1.0,
+    "latency_seconds": 11.587,
+    "model_calls": 1,
+    "generation_model": "gpt-5.4-mini",
+    "judge_correctness": 5,
+    "judge_completeness": 4,
+    "judge_grounding": 5,
+    "judge_average": 4.67,
+    "judge_rationale": "The candidate matches all key decisions and actions from the reference and is precise in its use of evidence, with correct attribution and no invented material or errors. The candidate\u2019s summary and notes detail almost all substantive points raised in the transcript (power, shape, materials, controls, slogan placement, LCD discussion, Play-doh for design), and grounds each with quotes. The main gap is in decision coverage: reference includes additional specific decisions (e.g., rubber buttons, snowman shape, fruit-like feel, use of plastic), while candidate merges or emphasizes overall product themes rather than listing these as separate decisions, slightly impacting completeness. All evidence is accurate and well-grounded.",
+    "judge_model_calls": 1,
+    "judge_model": "gpt-4.1-judge",
+    "candidate_extraction": {
+      "title": "AMI meeting ES2002c",
+      "meeting_date": null,
+      "summary": "The group discussed whether the product needed an LCD display and concluded it would add cost without enough benefit, especially because there was no input device for listings. They also explored the product\u2019s power, shape, materials, lighting, and slogan placement, leaning toward a kinetic power idea, a curvy/snowman-like form, and a translucent yellow case with buttons and possible backlighting. Toward the end, they agreed the slogan could go on the casing and noted the next meeting would be in thirty minutes.",
+      "notes": [
+        {
+          "id": "n1",
+          "title": "Power and Energy Concept",
+          "description": "The team considered how to power the product and whether it could support a light. They preferred a kinetic power concept with a battery backup so users would not need to charge the remote control frequently.",
+          "evidence": [
+            {
+              "quote": "We're gonna need to put in a really good battery so people don't have to charge their r remote control every few days.",
+              "line_start": 5,
+              "line_end": 5
+            },
+            {
+              "quote": "I really like the idea of this kinetic thing where you'd have the back-up of the battery, but have have kinetic power,",
+              "line_start": 55,
+              "line_end": 55
+            }
+          ]
+        },
+        {
+          "id": "n2",
+          "title": "Product Shape and Tactile Form",
+          "description": "The discussion moved to the overall shape, with suggestions for a curvy form and a snowman-like silhouette. The product was also described as something comfortable to hold, with a textured feel like fruit.",
+          "evidence": [
+            {
+              "quote": "maybe not a p a fruit shape but a very sort of curvy type shape.",
+              "line_start": 8,
+              "line_end": 8
+            },
+            {
+              "quote": "I'd quite like a sort of uh snowman type shape.",
+              "line_start": 22,
+              "line_end": 22
+            },
+            {
+              "quote": "Feel like fruit.",
+              "line_start": 114,
+              "line_end": 114
+            }
+          ]
+        },
+        {
+          "id": "n3",
+          "title": "Colour and Case Treatment",
+          "description": "The corporate colour yellow was used as a reference point for the product\u2019s look. The group discussed a yellow-tinted, slightly transparent case, possibly with light running through it, to create a subtle glow.",
+          "evidence": [
+            {
+              "quote": "when the corporate colour is yellow,",
+              "line_start": 14,
+              "line_end": 14
+            },
+            {
+              "quote": "we could think about about the colour of the whole product being yellow",
+              "line_start": 15,
+              "line_end": 15
+            }
+          ]
+        },
+        {
+          "id": "n4",
+          "title": "LCD Display and Listings",
+          "description": "The group questioned whether an LCD display was necessary and what it would do. The main suggested use was showing listings while scrolling stations, but concern was raised that there was no way to input the listings.",
+          "evidence": [
+            {
+              "quote": "Do we need an L_C_D_ display?",
+              "line_start": 38,
+              "line_end": 38
+            },
+            {
+              "quote": "I think that will be a problem because we don't have an input device to get the listings into it,",
+              "line_start": 48,
+              "line_end": 48
+            }
+          ]
+        },
+        {
+          "id": "n5",
+          "title": "Controls and Jog Dial",
+          "description": "The team considered a jog dial for navigation and control. They debated its orientation and use, with concerns about accidental movement and the possibility that it would be more suitable for volume or brightness than for channel selection.",
+          "evidence": [
+            {
+              "quote": "Could we use like a jog dial, like a nice just sort of round, somewhere on it where you just roll it?",
+              "line_start": 75,
+              "line_end": 75
+            },
+            {
+              "quote": "it might work for volume,",
+              "line_start": 86,
+              "line_end": 86
+            },
+            {
+              "quote": "but not for channels right.",
+              "line_start": 90,
+              "line_end": 90
+            }
+          ]
+        },
+        {
+          "id": "n6",
+          "title": "Buttons, Lighting, and Material Texture",
+          "description": "The conversation covered rubber buttons, backlighting, and the possibility of a glowing case. The group also noted that textured plastic could feel soft or grippy in the hand.",
+          "evidence": [
+            {
+              "quote": "I know we're gonna have like rubber buttons",
+              "line_start": 58,
+              "line_end": 58
+            },
+            {
+              "quote": "Could have things like backlighting the buttons and stuff like that.",
+              "line_start": 60,
+              "line_end": 60
+            },
+            {
+              "quote": "so you can get plastics that actually feel soft in your hand.",
+              "line_start": 112,
+              "line_end": 112
+            }
+          ]
+        },
+        {
+          "id": "n7",
+          "title": "Slogan Placement",
+          "description": "The team revisited how to incorporate the slogan into the product. They settled on placing it somewhere on the casing, likely on the side.",
+          "evidence": [
+            {
+              "quote": "can we think of any way of getting the slogan into this thing?",
+              "line_start": 93,
+              "line_end": 93
+            },
+            {
+              "quote": "we've got like the the l slogan somewhere like on the casing at the side,",
+              "line_start": 96,
+              "line_end": 96
+            }
+          ]
+        },
+        {
+          "id": "n8",
+          "title": "Upcoming Meeting and Design Work",
+          "description": "The facilitator said the next meeting would take place in thirty minutes. They also noted that the designers would be working with Play-doh, and asked whether everyone was happy with what they were doing.",
+          "evidence": [
+            {
+              "quote": "the next meeting's gonna be in thirty minutes,",
+              "line_start": 99,
+              "line_end": 99
+            },
+            {
+              "quote": "I know that the designers are gonna be working with Play-doh on that.",
+              "line_start": 102,
+              "line_end": 102
+            },
+            {
+              "quote": "Is everybody kind of happy about what they're gonna be doing?",
+              "line_start": 104,
+              "line_end": 104
+            }
+          ]
+        }
+      ],
+      "actions": [
+        {
+          "id": "a1",
+          "task": "Work with Play-doh on the design",
+          "owner": "designers",
+          "deadline_text": null,
+          "deadline": null,
+          "status": "proposed",
+          "evidence": [
+            {
+              "quote": "I know that the designers are gonna be working with Play-doh on that.",
+              "line_start": 102,
+              "line_end": 102
+            },
+            {
+              "quote": "the next meeting's gonna be in thirty minutes,",
+              "line_start": 99,
+              "line_end": 99
+            }
+          ]
+        }
+      ],
+      "decisions": [
+        {
+          "id": "d1",
+          "summary": "The LCD display was not pursued because it was seen as unnecessary and difficult to support with listings input.",
+          "rationale": "Participants questioned its usefulness, cost, and feasibility, and no one objected when the group moved away from it.",
+          "evidence": [
+            {
+              "quote": "I would say no need for a talk-back.",
+              "line_start": 51,
+              "line_end": 51
+            },
+            {
+              "quote": "I think that will be a problem because we don't have an input device to get the listings into it,",
+              "line_start": 48,
+              "line_end": 48
+            }
+          ]
+        },
+        {
+          "id": "d2",
+          "summary": "The product concept should emphasize a coherent yellow look and feel with a curvy, comfortable shape.",
+          "rationale": "The group repeatedly anchored the design around the company yellow and preferred a soft, rounded form that felt comfortable in the hand.",
+          "evidence": [
+            {
+              "quote": "we could think about about the colour of the whole product being yellow",
+              "line_start": 15,
+              "line_end": 15
+            },
+            {
+              "quote": "something quite curvy?",
+              "line_start": 11,
+              "line_end": 11
+            },
+            {
+              "quote": "something that s sits in your hand comfortably, sort of feels right in your hand.",
+              "line_start": 10,
+              "line_end": 10
+            }
+          ]
+        },
+        {
+          "id": "d3",
+          "summary": "The slogan should be placed on the casing, likely at the side.",
+          "rationale": "This was the clearest placement proposed after discussion about how to include the slogan in the product.",
+          "evidence": [
+            {
+              "quote": "we've got like the the l slogan somewhere like on the casing at the side,",
+              "line_start": 96,
+              "line_end": 96
+            }
+          ]
+        }
+      ],
+      "open_questions": [
+        {
+          "id": "q1",
+          "question": "How will the product\u2019s listings be input if an LCD display is used?",
+          "owner": null,
+          "evidence": [
+            {
+              "quote": "we don't have an input device to get the listings into it,",
+              "line_start": 48,
+              "line_end": 48
+            }
+          ]
+        },
+        {
+          "id": "q2",
+          "question": "What is the final control mechanism for scrolling and other functions: jog dial, flat spinner, or slide?",
+          "owner": null,
+          "evidence": [
+            {
+              "quote": "Could we use like a jog dial, like a nice just sort of round, somewhere on it where you just roll it?",
+              "line_start": 75,
+              "line_end": 75
+            },
+            {
+              "quote": "what if it was flat and you just spun it,",
+              "line_start": 107,
+              "line_end": 107
+            },
+            {
+              "quote": "a slide, because then you you don't have to put the hand.",
+              "line_start": 109,
+              "line_end": 109
+            }
+          ]
+        }
+      ],
+      "warnings": [
+        "n3: removed unsupported evidence quote",
+        "n4: removed unsupported evidence quote",
+        "a1: removed a deadline not present in its evidence"
+      ]
+    }
+  },
+  {
+    "case": "ami-es2013d",
+    "strategy": "Single model",
+    "entity_f1": 0.0,
+    "semantic_entity_f1": 0.0,
+    "grounding_rate": 1.0,
+    "latency_seconds": 6.889,
+    "model_calls": 1,
+    "generation_model": "gpt-5.4-mini",
+    "judge_correctness": 4,
+    "judge_completeness": 3,
+    "judge_grounding": 4,
+    "judge_average": 3.67,
+    "judge_rationale": "The candidate correctly summarizes most topics and captures relevant actions and open questions, with good supporting evidence. However, it omits all substantive decisions present in the reference\u2014such as kinetic battery, push button selection, plastic material, color choices, and button material\u2014despite clear transcript support. The open question on button material is also missing, reducing completeness. Evidence is generally well-grounded, but the warning on Q2 could suggest either diligence or an error depending on the intent; nonetheless, missed decisions are the main gap.",
+    "judge_model_calls": 1,
+    "judge_model": "gpt-4.1-judge",
+    "candidate_extraction": {
+      "title": "AMI meeting ES2013d",
+      "meeting_date": null,
+      "summary": "The group discussed the product form, comparing a banana-like shape with a more abstract intermediate shape, and noted there was no decision yet on curvature. They also reviewed interface and material details, including a simple chip, push buttons, special black buttons, and possible plastic or rubber components. The meeting ended with a reminder to complete the final questionnaire, meeting summary, and final report.",
+      "notes": [
+        {
+          "id": "N1",
+          "title": "Product Form and Curvature",
+          "description": "The participants compared the desired shape of the product, debating whether it should be a recognizable banana, a blob, or something in between. They concluded that no final decision had been made on curvatures, though the prototype might provide guidance.",
+          "evidence": [
+            {
+              "quote": "There was no decision made on the curvatures or double curvature or straight.",
+              "line_start": 2,
+              "line_end": 2
+            },
+            {
+              "quote": "what we re really need to decide is whether we want the actual banana shape or just a a purely blob or some sort of abstraction in between the two",
+              "line_start": 5,
+              "line_end": 5
+            }
+          ]
+        },
+        {
+          "id": "N2",
+          "title": "Interface and Material Choices",
+          "description": "The team discussed keeping the electronics simple with a chip and push-button interface. They also talked about button materials and finishes, including special black buttons and the possibility of plastic, rubber, or a combination of the two.",
+          "evidence": [
+            {
+              "quote": "Electronic simple chip on print, and we'll need one of those.",
+              "line_start": 28,
+              "line_end": 28
+            },
+            {
+              "quote": "it just says push button interface",
+              "line_start": 49,
+              "line_end": 49
+            },
+            {
+              "quote": "I mean I I still quite like the idea of combining plastic and rubber myself",
+              "line_start": 47,
+              "line_end": 47
+            },
+            {
+              "quote": "they'll be rubber, yep.",
+              "line_start": 53,
+              "line_end": 53
+            }
+          ]
+        }
+      ],
+      "actions": [
+        {
+          "id": "A1",
+          "task": "Complete the final questionnaire and meeting summary.",
+          "owner": null,
+          "deadline_text": null,
+          "deadline": null,
+          "status": "proposed",
+          "evidence": [
+            {
+              "quote": "we've therefore we have to do the final questionnaire and do the meeting summary",
+              "line_start": 59,
+              "line_end": 59
+            }
+          ]
+        },
+        {
+          "id": "A2",
+          "task": "Prepare the final report for presentation.",
+          "owner": null,
+          "deadline_text": null,
+          "deadline": null,
+          "status": "proposed",
+          "evidence": [
+            {
+              "quote": "I have a final report to present",
+              "line_start": 60,
+              "line_end": 60
+            }
+          ]
+        }
+      ],
+      "decisions": [],
+      "open_questions": [
+        {
+          "id": "Q1",
+          "question": "Should the product use a banana shape, a blob shape, or an abstraction in between?",
+          "owner": null,
+          "evidence": [
+            {
+              "quote": "whether we want the actual banana shape or just a a purely blob or some sort of abstraction in between the two",
+              "line_start": 5,
+              "line_end": 5
+            },
+            {
+              "quote": "that's maybe not something we have to decide just right now",
+              "line_start": 16,
+              "line_end": 16
+            }
+          ]
+        },
+        {
+          "id": "Q2",
+          "question": "What curvature should the case have: uncurved, single curve, or double curve?",
+          "owner": null,
+          "evidence": [
+            {
+              "quote": "the case will be uncurved and flat or a single curve or a double curve.",
+              "line_start": 33,
+              "line_end": 33
+            }
+          ]
+        }
+      ],
+      "warnings": [
+        "Q2: removed unsupported evidence quote"
+      ]
+    }
+  },
+  {
+    "case": "ami-es2007c",
+    "strategy": "Single model",
+    "entity_f1": 0.0,
+    "semantic_entity_f1": 0.1111,
+    "grounding_rate": 1.0,
+    "latency_seconds": 10.67,
+    "model_calls": 1,
+    "generation_model": "gpt-5.4-mini",
+    "judge_correctness": 4,
+    "judge_completeness": 3,
+    "judge_grounding": 4,
+    "judge_average": 3.67,
+    "judge_rationale": "The candidate extraction is mostly accurate in capturing the main decisions and actions, and the evidence provided generally supports its records. It accurately summarizes key discussion points (simplicity of the remote, rejection of complex features, assignment of tasks, kinetic concept, and visual styling). However, it is incomplete: it omits some substantive actions and open questions present in the reference, such as the product evaluation action, reference to the case material (rubber), the decision to exclude a display, and several open questions (about Bluetooth, fruit theme integration, and the sample sensor). It does invent an owner assignment ('Catherine'/'Gabriel'), which is not explicit in the transcript, though inferable from names, resulting in a small deduction for grounding. Warnings note removal of unsourced items, but some relevant content remains omitted. Overall, strong fidelity to the transcript but misses a few important details for completeness.",
+    "judge_model_calls": 1,
+    "judge_model": "gpt-4.1-judge",
+    "candidate_extraction": {
+      "title": "AMI meeting ES2007c",
+      "meeting_date": null,
+      "summary": "The team agreed to keep the remote control simple, favoring rubber push-buttons and dropping ideas such as a chip-on-print, display, and speech-response features. They also discussed visual styling, including bright or fruity colors, and assigned follow-up work on look and feel, user interface design, and product evaluation before the next meeting.",
+      "notes": [
+        {
+          "id": "note-1",
+          "title": "Remote Control Input Simplicity",
+          "description": "The group converged on a straightforward button-based remote control and rejected more complex input ideas. They also agreed not to include a display or speech-response feature in the unit.",
+          "evidence": [
+            {
+              "quote": "So let's not let's uh not bother with the chip on print.",
+              "line_start": 8,
+              "line_end": 8
+            },
+            {
+              "quote": "we're going for the simple buttons.",
+              "line_start": 25,
+              "line_end": 25
+            },
+            {
+              "quote": "So we're we're not gonna have any sort of display I think uh.",
+              "line_start": 29,
+              "line_end": 29
+            },
+            {
+              "quote": "Oh, then forget about it.",
+              "line_start": 23,
+              "line_end": 23
+            }
+          ]
+        },
+        {
+          "id": "note-2",
+          "title": "Branding and Color Direction",
+          "description": "The team discussed making the product look fresh and marketable, including the possibility of Bluetooth, but settled back on the kinetic concept instead. They also talked about using bright or fruity colors and possibly a fruit-like power button to give the remote a distinctive look.",
+          "evidence": [
+            {
+              "quote": "right, we're gonna go go back to um going with the kinetic thing,",
+              "line_start": 56,
+              "line_end": 56
+            },
+            {
+              "quote": "Maybe make it like fruity colours or something.",
+              "line_start": 61,
+              "line_end": 61
+            },
+            {
+              "quote": "The power button could be like a big apple or something.",
+              "line_start": 64,
+              "line_end": 64
+            },
+            {
+              "quote": "Yeah I mean, that that seems to work well with for products like iPod,",
+              "line_start": 69,
+              "line_end": 69
+            }
+          ]
+        },
+        {
+          "id": "note-3",
+          "title": "Work Allocation for Next Meeting",
+          "description": "Tasks were assigned for the next meeting. Catherine was to work on look and feel design, Gabriel was to work on user interface design, and product evaluation work was also assigned.",
+          "evidence": [
+            {
+              "quote": "from you Catherine wi your y y you know you're gonna be working on the the look and feel design.",
+              "line_start": 72,
+              "line_end": 73
+            },
+            {
+              "quote": "Gabriel, you're gonna be working on, you know come up with the the user interface design.",
+              "line_start": 75,
+              "line_end": 75
+            }
+          ]
+        }
+      ],
+      "actions": [
+        {
+          "id": "action-1",
+          "task": "Work on the look and feel design and bring physical ideas to the next meeting",
+          "owner": "Catherine",
+          "deadline_text": null,
+          "deadline": null,
+          "status": "proposed",
+          "evidence": [
+            {
+              "quote": "from you Catherine wi your y y you know you're gonna be working on the the look and feel design.",
+              "line_start": 72,
+              "line_end": 73
+            },
+            {
+              "quote": "be able to come in and show us some some i some physical ideas.",
+              "line_start": 82,
+              "line_end": 82
+            }
+          ]
+        },
+        {
+          "id": "action-2",
+          "task": "Work on the user interface design together with the look and feel design work",
+          "owner": "Gabriel",
+          "deadline_text": null,
+          "deadline": null,
+          "status": "proposed",
+          "evidence": [
+            {
+              "quote": "Gabriel, you're gonna be working on, you know come up with the the user interface design.",
+              "line_start": 75,
+              "line_end": 75
+            },
+            {
+              "quote": "Then basically, you two are gonna be working together on this.",
+              "line_start": 76,
+              "line_end": 76
+            }
+          ]
+        }
+      ],
+      "decisions": [
+        {
+          "id": "decision-1",
+          "summary": "The remote control should use simple rubber push-buttons rather than a chip-on-print, display, or speech-response approach.",
+          "rationale": "The team preferred simplicity and rejected features that would make the device too busy or unnecessary for its purpose.",
+          "evidence": [
+            {
+              "quote": "Let's have rubber push buttons, hey.",
+              "line_start": 5,
+              "line_end": 5
+            },
+            {
+              "quote": "So let's not let's uh not bother with the chip on print.",
+              "line_start": 8,
+              "line_end": 8
+            },
+            {
+              "quote": "we're going for the simple buttons.",
+              "line_start": 25,
+              "line_end": 25
+            }
+          ]
+        },
+        {
+          "id": "decision-2",
+          "summary": "The team decided to return to the kinetic concept for the product direction.",
+          "rationale": "After discussing Bluetooth as a marketing idea, they settled on the kinetic thing again.",
+          "evidence": [
+            {
+              "quote": "right, we're gonna go go back to um going with the kinetic thing,",
+              "line_start": 56,
+              "line_end": 56
+            },
+            {
+              "quote": "Okay. Yeah, this that's that's very good.",
+              "line_start": 53,
+              "line_end": 53
+            }
+          ]
+        }
+      ],
+      "open_questions": [
+        {
+          "id": "question-1",
+          "question": "What exact visual style and color scheme should the remote control use?",
+          "owner": null,
+          "evidence": [
+            {
+              "quote": "maybe a couple of colours like uh like a black with with yellow and somewhere,",
+              "line_start": 32,
+              "line_end": 32
+            },
+            {
+              "quote": "Maybe make it like fruity colours or something.",
+              "line_start": 61,
+              "line_end": 61
+            },
+            {
+              "quote": "I'm not sure about the buttons being in the shape of fruit though.",
+              "line_start": 59,
+              "line_end": 59
+            }
+          ]
+        }
+      ],
+      "warnings": [
+        "note-3: removed unsupported evidence quote",
+        "action-1: removed a deadline not present in its evidence",
+        "action-2: removed a deadline not present in its evidence",
+        "action-3: removed unsupported evidence quote",
+        "action-3: omitted because it has no exact transcript evidence",
+        "decision-1: removed unsupported evidence quote",
+        "question-2: removed unsupported evidence quote",
+        "question-2: omitted because it has no exact transcript evidence"
+      ]
+    }
+  }
+]

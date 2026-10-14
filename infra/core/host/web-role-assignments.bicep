@@ -55,3 +55,13 @@ resource azureAiUserRoleAssignment 'Microsoft.Authorization/roleAssignments@2022
     principalType: 'ServicePrincipal'
   }
 }
+
+resource speechUserRoleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  name: guid(aiAccount.id, principalId, 'f2dc8367-1007-4938-bd23-fe263f013447')
+  scope: aiAccount
+  properties: {
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'f2dc8367-1007-4938-bd23-fe263f013447')
+    principalId: principalId
+    principalType: 'ServicePrincipal'
+  }
+}

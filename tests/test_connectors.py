@@ -1,5 +1,7 @@
 from dataclasses import dataclass
 
+import pytest
+
 from meeting_to_action.connectors import MicrosoftGraphConnector, RemoteTranscript, ZoomConnector
 from meeting_to_action.ingestion import TranscriptSource
 
@@ -61,6 +63,20 @@ def test_graph_download_parses_remote_file() -> None:
 
     assert document.text == "Decision: Ship Friday."
     assert document.source is TranscriptSource.MICROSOFT_365
+
+
+def test_graph_mail_draft_requires_approval_and_never_sends() -> None:
+    session = FakeSession([FakeResponse({"id": "draft-1", "isDraft": True})])
+    connector = MicrosoftGraphConnector("token", session=session)
+    message = {"subject": "Follow up", "body": {"contentType": "Text", "content": "Action"}}
+
+    with pytest.raises(PermissionError, match="explicit approval"):
+        connector.create_mail_draft(message, approved=False)
+    result = connector.create_mail_draft(message, approved=True)
+
+    assert result["isDraft"] is True
+    assert session.calls[0][1].endswith("/me/messages")
+    assert not session.calls[0][1].endswith("/send")
 
 
 def test_zoom_lists_and_downloads_transcript() -> None:

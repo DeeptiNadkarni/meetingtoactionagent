@@ -2,6 +2,7 @@
 
 import asyncio
 import html
+import json
 import os
 from datetime import date, datetime, time, timedelta
 from pathlib import Path
@@ -32,10 +33,19 @@ from meeting_to_action.extraction import (
     extract_meeting,
     foundry_is_configured,
 )
-from meeting_to_action.ingestion import TranscriptDocument, parse_uploaded_transcript
+from meeting_to_action.advanced import ContextDocument, QualitySeverity, TranscriptSegment
+from meeting_to_action.ingestion import (
+    TranscriptDocument,
+    parse_context_document,
+    parse_uploaded_transcript,
+)
 from meeting_to_action.models import MeetingExtraction
-from meeting_to_action.review import apply_review_edits, build_change_audit
+from meeting_to_action.quality import analyze_quality
+from meeting_to_action.review import apply_review_edits, build_change_audit, build_correction_events
+from meeting_to_action.speech import segments_from_document, speech_is_configured, transcribe_media
+from meeting_to_action.timeline import build_timeline
 from meeting_to_action.transcript import NumberedTranscript
+from meeting_to_action.workflows import ActionWorkflowDraft
 
 load_dotenv()
 
@@ -142,6 +152,8 @@ st.markdown(
     .transcript-line:nth-child(even) { background: #f6f8f7; }
     .transcript-line.selected { background: #e1f3f0; border-left: 4px solid var(--teal-light); padding-left: calc(.75rem - 4px); }
     .line-number { color: #58706c; font-variant-numeric: tabular-nums; text-align: right; user-select: none; }
+    .timeline-event { border-left: 3px solid #52aaa1; margin: .45rem 0; padding: .2rem .75rem .55rem; }
+    .timeline-time { color: #58706c; font-size: .8rem; font-variant-numeric: tabular-nums; font-weight: 700; }
     div.stButton > button[kind="primary"] { background: var(--teal); border-color: var(--teal); }
     @media (max-width: 640px) {
         h1.product-name { font-size: 2.25rem; }
@@ -297,11 +309,128 @@ def show_change_audit() -> None:
         mime="text/csv",
         width="stretch",
     )
+    history = st.session_state.get("correction_events", [])
+    if history:
+        with st.expander("Correction history"):
+            st.dataframe(
+                [{
+                    "Changed at": event["changed_at"],
+                    "Reviewer": event["actor"],
+                    "Record": f"{event['record_type']} {event['record_id']}",
+                    "Field": event["field"],
+                    "Before": event.get("before"),
+                    "After": event.get("after"),
+                } for event in history],
+                hide_index=True,
+                width="stretch",
+            )
+
+
+def quality_panel(extraction: MeetingExtraction) -> None:
+    st.subheader("Quality and conflicts")
+    documents = [
+        ContextDocument.model_validate(item)
+        for item in st.session_state.get("context_documents", [])
+    ]
+    findings = analyze_quality(extraction, documents)
+    if not findings:
+        st.success("No deterministic review flags were found.")
+        return
+
+    summary = st.columns(3)
+    severities = (
+        (QualitySeverity.CONFLICT, "Conflicts"),
+        (QualitySeverity.REVIEW, "Needs review"),
+        (QualitySeverity.INFO, "Context matches"),
+    )
+    for column, (severity, label) in zip(summary, severities):
+        column.metric(label, sum(finding.severity is severity for finding in findings))
+
+    for index, finding in enumerate(findings):
+        message = f"**{finding.title}**  \n{finding.detail}"
+        if finding.severity is QualitySeverity.CONFLICT:
+            st.error(message)
+        elif finding.severity is QualitySeverity.REVIEW:
+            st.warning(message)
+        else:
+            st.info(message)
+        if finding.line_numbers:
+            st.button(
+                f"Transcript lines {min(finding.line_numbers)}–{max(finding.line_numbers)}",
+                key=f"quality_lines_{index}",
+                icon=":material/format_quote:",
+                on_click=select_evidence_range,
+                args=(min(finding.line_numbers), max(finding.line_numbers)),
+            )
+        for citation in finding.context_citations:
+            document = next((item for item in documents if item.id == citation.document_id), None)
+            source = document.filename if document else citation.document_id
+            st.caption(f"Supporting context · {source}: “{citation.quote}”")
+
+
+def _format_milliseconds(value: int | None) -> str:
+    if value is None:
+        return "No recording timestamp"
+    seconds = value // 1_000
+    return f"{seconds // 60:02d}:{seconds % 60:02d}"
+
+
+def timeline_panel(extraction: MeetingExtraction) -> None:
+    st.subheader("Evidence timeline")
+    segments = [
+        TranscriptSegment.model_validate(item)
+        for item in st.session_state.get("transcript_segments", [])
+    ]
+    events = build_timeline(extraction, segments)
+    if not events:
+        st.info("No actions, decisions, or open questions are available for the timeline.")
+        return
+
+    for event in events:
+        time_label = _format_milliseconds(event.start_ms)
+        speaker = f" · {event.speaker}" if event.speaker else ""
+        st.markdown(
+            f'<div class="timeline-event"><div class="timeline-time">{time_label}{html.escape(speaker)}</div>'
+            f'<strong>{html.escape(event.kind.value.title())} · {html.escape(event.label)}</strong><br>'
+            f'{html.escape(event.detail)}</div>',
+            unsafe_allow_html=True,
+        )
+        controls = st.columns([1, 4])
+        controls[0].button(
+            "Play",
+            key=f"play_{event.id}",
+            icon=":material/play_arrow:",
+            disabled=event.start_ms is None or not st.session_state.get("meeting_media"),
+            on_click=st.session_state.update,
+            kwargs={"timeline_start_seconds": (event.start_ms or 0) // 1_000},
+        )
+        controls[1].button(
+            f"Lines {event.line_start}–{event.line_end}",
+            key=f"timeline_lines_{event.id}",
+            icon=":material/format_quote:",
+            on_click=select_evidence_range,
+            args=(event.line_start, event.line_end),
+        )
+    media = st.session_state.get("meeting_media")
+    if media:
+        media_type = st.session_state.get("meeting_media_type")
+        player = st.video if str(media_type).startswith("video/") else st.audio
+        player(
+            media,
+            format=media_type,
+            start_time=st.session_state.get("timeline_start_seconds", 0),
+        )
 
 
 def review_editor(extraction: MeetingExtraction) -> None:
     st.subheader("Human review")
     st.caption(extraction.summary)
+    reviewer = st.text_input(
+        "Reviewer",
+        value="Reviewer",
+        key="reviewer_name",
+        help="Name recorded with field-level corrections in this session.",
+    )
 
     with st.expander("Meeting notes", expanded=True):
         if extraction.notes:
@@ -439,7 +568,18 @@ def review_editor(extraction: MeetingExtraction) -> None:
                 clean_rows(note_frame),
             )
             st.session_state.reviewed = reviewed
-            st.session_state.review_audit = build_change_audit(extraction, reviewed)
+            changes = build_change_audit(extraction, reviewed)
+            st.session_state.review_audit = changes
+            corrected_at = datetime.now().astimezone()
+            events = build_correction_events(
+                changes,
+                actor=reviewer.strip() or "Reviewer",
+                changed_at=corrected_at,
+            )
+            st.session_state.correction_events = [
+                *st.session_state.get("correction_events", []),
+                *(event.model_dump(mode="json") for event in events),
+            ]
             st.session_state.review_approved_at = datetime.now().astimezone().strftime(
                 "%Y-%m-%d %H:%M:%S %Z"
             )
@@ -544,36 +684,48 @@ def model_lab_panel(
     baseline: MeetingExtraction,
 ) -> None:
     st.subheader("Model Lab")
-    st.caption("Compare the production baseline with an experimental trained deployment.")
+    st.caption("Compare one production pass with one experimental trained-model pass.")
     trained_model = os.getenv(TRAINED_MODEL_ENV, "").strip()
-    if strategy is ExtractionStrategy.DEMO:
-        st.info("Choose a Foundry-backed extraction design before comparing models.")
-        return
     if not trained_model:
         st.info(f"Model Lab will activate when {TRAINED_MODEL_ENV} names a deployed model.")
         return
 
     if st.button(
-        "Compare models",
+        "Compare single-pass models",
         icon=":material/compare_arrows:",
         width="stretch",
     ):
         try:
-            with st.spinner(f"Running {trained_model} with {strategy.value}…"):
+            baseline_model = os.getenv(MODEL_ENV, DEFAULT_MODEL)
+            with st.spinner(f"Comparing {baseline_model} with {trained_model}…"):
+                single_baseline = (
+                    baseline
+                    if strategy is ExtractionStrategy.SINGLE
+                    else asyncio.run(
+                        extract_meeting(
+                            transcript_text,
+                            title,
+                            ExtractionStrategy.SINGLE,
+                            model=baseline_model,
+                        )
+                    )
+                )
                 trained = asyncio.run(
                     extract_meeting(
                         transcript_text,
                         title,
-                        strategy,
+                        ExtractionStrategy.SINGLE,
                         model=trained_model,
                     )
                 )
             st.session_state.model_lab_result = {
                 "transcript": transcript_text,
                 "title": title,
-                "strategy": strategy.value,
+                "mode": "single-pass",
+                "baseline_model": baseline_model,
                 "model": trained_model,
-                "extraction": trained,
+                "baseline": single_baseline,
+                "trained": trained,
             }
         except Exception as error:
             st.error(f"Trained-model extraction failed: {error}")
@@ -583,7 +735,8 @@ def model_lab_panel(
         (
             comparison.get("transcript") == transcript_text,
             comparison.get("title") == title,
-            comparison.get("strategy") == strategy.value,
+            comparison.get("mode") == "single-pass",
+            comparison.get("baseline_model") == os.getenv(MODEL_ENV, DEFAULT_MODEL),
             comparison.get("model") == trained_model,
         )
     )
@@ -594,11 +747,11 @@ def model_lab_panel(
     with baseline_column:
         show_model_snapshot(
             "Production baseline",
-            os.getenv(MODEL_ENV, DEFAULT_MODEL),
-            baseline,
+            comparison["baseline_model"],
+            comparison["baseline"],
         )
     with trained_column:
-        show_model_snapshot("Experimental model", trained_model, comparison["extraction"])
+        show_model_snapshot("Experimental model", trained_model, comparison["trained"])
 
 
 def calendar_panel(reviewed: MeetingExtraction) -> None:
@@ -704,15 +857,108 @@ def calendar_panel(reviewed: MeetingExtraction) -> None:
         )
 
 
-def import_document(document: TranscriptDocument) -> None:
+def workflow_panel(reviewed: MeetingExtraction) -> None:
+    st.subheader("Outlook and Teams workflows")
+    if not reviewed.actions:
+        st.info("Approve at least one action before preparing a workflow.")
+        return
+    selected_id = st.selectbox(
+        "Action",
+        [item.id for item in reviewed.actions],
+        format_func=lambda item_id: next(item.task for item in reviewed.actions if item.id == item_id),
+        key="workflow_action",
+    )
+    action = next(item for item in reviewed.actions if item.id == selected_id)
+    recipients_text = st.text_input(
+        "Recipients",
+        placeholder="owner@example.com, team@example.com",
+        key="workflow_recipients",
+    )
+    recipients = [item.strip() for item in recipients_text.split(",") if item.strip()]
+    draft = ActionWorkflowDraft(
+        meeting_title=reviewed.title,
+        action=action,
+        recipients=recipients,
+    )
+
+    outlook_preview, teams_preview = st.tabs(["Outlook draft", "Teams preview"])
+    with outlook_preview:
+        st.markdown(f"**{draft.subject}**")
+        st.text(draft.body)
+    with teams_preview:
+        st.json(draft.adaptive_card(), expanded=True)
+
+    approved = st.checkbox(
+        "I reviewed the recipients, content, and transcript evidence",
+        key="workflow_approved",
+    )
+    actions = st.columns(3)
+    if approved:
+        actions[0].link_button(
+            "Open Outlook",
+            draft.outlook_url(),
+            icon=":material/mail:",
+            width="stretch",
+        )
+        actions[1].link_button(
+            "Open Teams",
+            draft.teams_url(),
+            icon=":material/chat:",
+            width="stretch",
+        )
+        actions[2].download_button(
+            "Adaptive Card",
+            data=json.dumps(draft.adaptive_card(), indent=2),
+            file_name=f"{action.id}-teams-card.json",
+            mime="application/json",
+            icon=":material/download:",
+            width="stretch",
+        )
+    else:
+        actions[0].button("Open Outlook", icon=":material/mail:", disabled=True, width="stretch")
+        actions[1].button("Open Teams", icon=":material/chat:", disabled=True, width="stretch")
+        actions[2].button("Adaptive Card", icon=":material/download:", disabled=True, width="stretch")
+
+    token = st.session_state.get("microsoft_access_token")
+    if not token:
+        st.caption("Connect a Microsoft source in the sidebar to create a saved Outlook draft through Graph.")
+        return
+    if st.button(
+        "Create saved Outlook draft",
+        type="primary",
+        icon=":material/drafts:",
+        disabled=not approved,
+        width="stretch",
+    ):
+        try:
+            result = MicrosoftGraphConnector(str(token)).create_mail_draft(
+                draft.graph_message(),
+                approved=approved,
+            )
+            st.success(f"Outlook draft created: {result.get('subject', draft.subject)}")
+        except Exception as error:
+            st.error(f"Outlook draft was not created: {error}")
+
+
+def import_document(
+    document: TranscriptDocument,
+    *,
+    media: bytes | None = None,
+    media_type: str | None = None,
+) -> None:
     previous_hash = st.session_state.get("transcript_hash")
     st.session_state.transcript_input = document.text
     st.session_state.meeting_title = document.title
     st.session_state.transcript_hash = document.content_hash
     st.session_state.imported_document = document.model_dump(mode="json")
+    st.session_state.transcript_segments = document.metadata.get("segments", [])
+    st.session_state.meeting_media = media
+    st.session_state.meeting_media_type = media_type
+    st.session_state.timeline_start_seconds = 0
     st.session_state.extraction = None
     st.session_state.reviewed = None
     st.session_state.review_audit = None
+    st.session_state.correction_events = []
     st.session_state.review_approved_at = None
     st.session_state.messages = []
     st.session_state.model_lab_result = None
@@ -721,6 +967,38 @@ def import_document(document: TranscriptDocument) -> None:
         st.info("This transcript was already imported; the existing text was refreshed.")
     else:
         st.success(f"Imported {document.filename} from {document.source.value}.")
+
+
+def import_live_clip(document: TranscriptDocument, media: bytes, media_type: str | None) -> None:
+    existing = [
+        TranscriptSegment.model_validate(item)
+        for item in st.session_state.get("transcript_segments", [])
+    ]
+    offset = (existing[-1].end_ms + 250) if existing else 0
+    incoming = [
+        segment.model_copy(update={
+            "id": f"S{len(existing) + index}",
+            "start_ms": segment.start_ms + offset,
+            "end_ms": segment.end_ms + offset,
+        })
+        for index, segment in enumerate(segments_from_document(document), 1)
+    ]
+    combined = [*existing, *incoming]
+    st.session_state.transcript_segments = [item.model_dump(mode="json") for item in combined]
+    st.session_state.transcript_input = "\n".join(
+        f"{item.speaker}: {item.text}" if item.speaker else item.text for item in combined
+    )
+    st.session_state.meeting_media = None
+    st.session_state.meeting_media_type = None
+    st.session_state.imported_document = {
+        **document.model_dump(mode="json"),
+        "text": st.session_state.transcript_input,
+        "metadata": {"segments": st.session_state.transcript_segments, "mode": "live clips"},
+    }
+    st.session_state.extraction = None
+    st.session_state.reviewed = None
+    st.session_state.messages = []
+    st.success(f"Added {len(incoming)} transcribed live segments.")
 
 
 def candidate_picker(key: str, items: list[RemoteTranscript], download: Any) -> None:
@@ -793,6 +1071,53 @@ def google_sign_in() -> Any | None:
 
 
 def source_panel(source: str) -> None:
+    if source in {"Recording", "Live meeting"}:
+        if not speech_is_configured():
+            st.caption("Set AZURE_SPEECH_ENDPOINT and grant Cognitive Services Speech User access.")
+            return
+        locales = st.multiselect(
+            "Spoken languages",
+            ["en-US", "es-ES", "fr-FR", "de-DE", "hi-IN", "ja-JP"],
+            default=["en-US"],
+            help="Choose a short candidate list for more reliable language detection.",
+        )
+        max_speakers = st.number_input("Maximum speakers", min_value=2, max_value=35, value=6)
+        if source == "Recording":
+            uploaded = st.file_uploader(
+                "Audio or video recording",
+                type=["aac", "flac", "m4a", "mov", "mp3", "mp4", "ogg", "wav", "webm", "wma"],
+                max_upload_size=300,
+            )
+            if uploaded and st.button("Transcribe recording", width="stretch"):
+                try:
+                    with st.spinner("Transcribing speakers and timestamps with Azure Speech…"):
+                        content = uploaded.getvalue()
+                        document = transcribe_media(
+                            uploaded.name,
+                            content,
+                            locales=locales or ["en-US"],
+                            max_speakers=int(max_speakers),
+                        )
+                    import_document(document, media=content, media_type=uploaded.type)
+                except Exception as error:
+                    st.error(f"Recording transcription failed: {error}")
+        else:
+            clip = st.audio_input("Record a live meeting clip")
+            if clip and st.button("Transcribe and add clip", width="stretch"):
+                try:
+                    with st.spinner("Transcribing the live segment…"):
+                        content = clip.getvalue()
+                        document = transcribe_media(
+                            "live-segment.wav",
+                            content,
+                            locales=locales or ["en-US"],
+                            max_speakers=int(max_speakers),
+                        )
+                    import_live_clip(document, content, clip.type)
+                except Exception as error:
+                    st.error(f"Live segment transcription failed: {error}")
+        return
+
     if source == "Upload":
         uploaded = st.file_uploader(
             "Transcript file",
@@ -945,11 +1270,19 @@ st.session_state.setdefault("meeting_title", "Pilot launch review")
 
 with st.sidebar:
     st.header("Meeting source")
+    source_labels = {
+        "Paste": "Paste transcript text",
+        "Upload": "Upload transcript file",
+        "Recording": "Upload audio/video recording",
+        "Live meeting": "Record live meeting clips",
+    }
     source = st.selectbox(
         "Source",
         [
             "Paste",
             "Upload",
+            "Recording",
+            "Live meeting",
             "Microsoft 365",
             "Teams",
             "Azure Blob",
@@ -958,10 +1291,32 @@ with st.sidebar:
             "Outlook email",
             "Gmail",
         ],
-        help="Choose where the meeting transcript will come from.",
+        format_func=lambda option: source_labels.get(option, option),
+        help=(
+            "Choose what you have now: transcript text, a transcript file, "
+            "an existing recording, or a meeting happening live."
+        ),
     )
     if source != "Paste":
         source_panel(source)
+    context_uploads = st.file_uploader(
+        "Agenda or supporting documents",
+        type=["txt", "docx", "pdf"],
+        accept_multiple_files=True,
+        max_upload_size=10,
+        help="Optional context for alignment checks. Transcript evidence remains authoritative.",
+    )
+    if context_uploads:
+        try:
+            st.session_state.context_documents = [
+                parse_context_document(item.name, item.getvalue()).model_dump(mode="json")
+                for item in context_uploads
+            ]
+            st.caption(f"{len(context_uploads)} supporting document(s) ready")
+        except ValueError as error:
+            st.error(error)
+    else:
+        st.session_state.context_documents = []
     title = st.text_input(
         "Meeting title",
         key="meeting_title",
@@ -1004,6 +1359,7 @@ with transcript_column:
         st.session_state.extraction = None
         st.session_state.reviewed = None
         st.session_state.review_audit = None
+        st.session_state.correction_events = []
         st.session_state.review_approved_at = None
         st.session_state.messages = []
         st.session_state.model_lab_result = None
@@ -1043,11 +1399,18 @@ with workspace_column:
                         width="stretch",
                     )
 
-        review_tab, chat_tab, calendar_tab, model_lab_tab = st.tabs(
-            ["Review", "Ask", "Calendar", "Model Lab"]
+        tab_names = ["Review", "Quality", "Timeline", "Ask", "Calendar", "Workflows"]
+        if os.getenv(TRAINED_MODEL_ENV, "").strip():
+            tab_names.append("Model Lab")
+        review_tab, quality_tab, timeline_tab, chat_tab, calendar_tab, workflow_tab, *model_lab_tabs = st.tabs(
+            tab_names
         )
         with review_tab:
             review_editor(extraction)
+        with quality_tab:
+            quality_panel(extraction)
+        with timeline_tab:
+            timeline_panel(extraction)
         reviewed = st.session_state.get("reviewed")
         with chat_tab:
             if reviewed:
@@ -1059,5 +1422,11 @@ with workspace_column:
                 calendar_panel(reviewed)
             else:
                 st.info("Approve the reviewed record to prepare a calendar event.")
-        with model_lab_tab:
-            model_lab_panel(transcript_text, title, strategy, extraction)
+        with workflow_tab:
+            if reviewed:
+                workflow_panel(reviewed)
+            else:
+                st.info("Approve the reviewed record to prepare Outlook and Teams workflows.")
+        if model_lab_tabs:
+            with model_lab_tabs[0]:
+                model_lab_panel(transcript_text, title, strategy, extraction)

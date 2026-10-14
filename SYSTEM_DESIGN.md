@@ -2,8 +2,8 @@
 
 ## System Design Document
 
-**Status:** Implemented capstone system
-**Last updated:** September 27, 2026
+**Status:** Advanced single-meeting branch implemented; public production unchanged
+**Last updated:** September 28, 2026
 **Primary runtime:** Python 3.12 and Streamlit
 **AI platform:** Microsoft Foundry with Microsoft Agent Framework
 
@@ -26,6 +26,12 @@ checks form the boundary between probabilistic model output and trusted applicat
 The central design principle is that fluent model output is not proof. Every accepted record must
 carry an exact transcript quote and line range, survive deterministic validation, and pass human
 review before it can support question answering or a downstream calendar action.
+
+The advanced branch adds Azure Speech recording/live-clip ingestion, timestamped speaker
+segments, supporting-document alignment, explainable conflict checks, actor-attributed correction
+history, an evidence-linked playback timeline, and approval-gated Outlook/Teams workflow previews.
+It remains scoped to one meeting in session memory and does not alter the deployed production
+revision or replace `gpt-5.4-mini` with the experimental fine-tuned model.
 
 ## 2. Problem Definition
 
@@ -51,6 +57,10 @@ The system solves a narrow problem:
 - Record field-level changes made during review.
 - Answer meeting questions from retrieved evidence and the approved record.
 - Prepare calendar drafts only after explicit user confirmation.
+- Transcribe uploaded recordings and successive microphone clips through an existing Azure Speech resource.
+- Compare transcript outcomes with supporting documents without treating those documents as occurrence evidence.
+- Explain missing fields and potential conflicts without unsupported confidence percentages.
+- Prepare Outlook drafts and Teams previews only after explicit user approval.
 - Evaluate quality, grounding, latency, and model-call cost.
 
 ### 2.3 Out of scope
@@ -78,6 +88,11 @@ The system solves a narrow problem:
 | FR-8 | Answer supported questions with validated citations and reject unsupported topics. |
 | FR-9 | Require explicit approval before creating or opening a calendar draft. |
 | FR-10 | Evaluate all model strategies on a frozen benchmark with deterministic and judged metrics. |
+| FR-11 | Transcribe audio/video with speaker, locale, and timestamp metadata through Azure Speech. |
+| FR-12 | Build an evidence-linked timeline and seek recording playback to known timestamps. |
+| FR-13 | Record reviewer-attributed, timestamped field corrections while preserving evidence. |
+| FR-14 | Keep supporting documents separate from authoritative transcript evidence. |
+| FR-15 | Gate Outlook drafts, Teams deep links, and Adaptive Card downloads behind approval. |
 
 ### 3.2 Quality attributes
 
@@ -179,6 +194,12 @@ flowchart TB
 | `meeting_to_action/chat.py` | Grounded factual answers and labeled analytical synthesis. |
 | `meeting_to_action/review.py` | Reconstruction of reviewed records while preserving evidence and producing field-level audits. |
 | `meeting_to_action/calendar.py` | Calendar payload generation, provider dispatch, and approval enforcement. |
+| `meeting_to_action/advanced.py` | Speech segments, context citations, quality findings, corrections, and timeline contracts. |
+| `meeting_to_action/speech.py` | Azure Speech fast transcription and phrase-to-segment normalization. |
+| `meeting_to_action/quality.py` | Deterministic missing-field, context-alignment, and conflict explanations. |
+| `meeting_to_action/timeline.py` | Maps transcript evidence lines to speech timestamps and speakers. |
+| `meeting_to_action/workflows.py` | Outlook/Teams preview payloads and Adaptive Card generation. |
+| `meeting_to_action/advanced_evaluation.py` | WER, timestamp, diarization, conflict, and live/batch metrics. |
 | `meeting_to_action/evaluation.py` | Frozen benchmark execution, deterministic metrics, semantic F1, and independent judge calls. |
 | `meeting_to_action/calibration.py` | Blinded reviewer packets and judge-human agreement calculation. |
 
@@ -247,6 +268,11 @@ classDiagram
 The current application stores imported content, generated records, approved records, chat
 history, selected evidence, and change audit in Streamlit session state. Evaluation datasets and
 results are local JSON or CSV files. OAuth token files are local and ignored by source control.
+
+Recording bytes, speech segments, parsed supporting documents, quality findings, timeline state,
+and correction events also remain in the active Streamlit session. Supporting documents are not
+inserted into transcript evidence. A new import or extraction invalidates downstream reviewed
+state; there is no cross-meeting database.
 
 This design is suitable for a single-user capstone but is not a durable system of record. A
 production design should persist approved records and immutable audits in an authenticated data

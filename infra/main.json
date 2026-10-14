@@ -4,8 +4,8 @@
   "metadata": {
     "_generator": {
       "name": "bicep",
-      "version": "0.46.1.21595",
-      "templateHash": "5372622381012735892"
+      "version": "0.47.16.16243",
+      "templateHash": "15890412848783123504"
     }
   },
   "parameters": {
@@ -89,6 +89,13 @@
       "defaultValue": "gpt-5.4-mini",
       "metadata": {
         "description": "Model deployment used by the Meeting-to-Action website"
+      }
+    },
+    "webFoundryTrainedModel": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": {
+        "description": "Optional fine-tuned model deployment exposed only in Model Lab"
       }
     },
     "aiFoundryResourceName": {
@@ -315,8 +322,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.46.1.21595",
-              "templateHash": "14858355023973354097"
+              "version": "0.47.16.16243",
+              "templateHash": "11054218692970704373"
             }
           },
           "definitions": {
@@ -840,8 +847,8 @@
                   "metadata": {
                     "_generator": {
                       "name": "bicep",
-                      "version": "0.46.1.21595",
-                      "templateHash": "16883918359922769508"
+                      "version": "0.47.16.16243",
+                      "templateHash": "10946893235334751359"
                     },
                     "description": "Creates a Log Analytics workspace."
                   },
@@ -922,8 +929,8 @@
                   "metadata": {
                     "_generator": {
                       "name": "bicep",
-                      "version": "0.46.1.21595",
-                      "templateHash": "10175201021457389589"
+                      "version": "0.47.16.16243",
+                      "templateHash": "17582976960561399970"
                     },
                     "description": "Creates an Application Insights instance based on an existing Log Analytics workspace."
                   },
@@ -1009,8 +1016,8 @@
                           "metadata": {
                             "_generator": {
                               "name": "bicep",
-                              "version": "0.46.1.21595",
-                              "templateHash": "4503555374144048993"
+                              "version": "0.47.16.16243",
+                              "templateHash": "17494143799659484341"
                             },
                             "description": "Creates a dashboard for an Application Insights instance."
                           },
@@ -2305,8 +2312,8 @@
                   "metadata": {
                     "_generator": {
                       "name": "bicep",
-                      "version": "0.46.1.21595",
-                      "templateHash": "3003044318014114141"
+                      "version": "0.47.16.16243",
+                      "templateHash": "17094779922055717472"
                     }
                   },
                   "definitions": {
@@ -2577,8 +2584,8 @@
                   "metadata": {
                     "_generator": {
                       "name": "bicep",
-                      "version": "0.46.1.21595",
-                      "templateHash": "2326761043153981722"
+                      "version": "0.47.16.16243",
+                      "templateHash": "12824881097767456808"
                     }
                   },
                   "parameters": {
@@ -2735,8 +2742,8 @@
                           "metadata": {
                             "_generator": {
                               "name": "bicep",
-                              "version": "0.46.1.21595",
-                              "templateHash": "3003044318014114141"
+                              "version": "0.47.16.16243",
+                              "templateHash": "17094779922055717472"
                             }
                           },
                           "definitions": {
@@ -3032,8 +3039,8 @@
                   "metadata": {
                     "_generator": {
                       "name": "bicep",
-                      "version": "0.46.1.21595",
-                      "templateHash": "12478855472761307538"
+                      "version": "0.47.16.16243",
+                      "templateHash": "6800819227793551064"
                     }
                   },
                   "parameters": {
@@ -5277,8 +5284,8 @@
                           "metadata": {
                             "_generator": {
                               "name": "bicep",
-                              "version": "0.46.1.21595",
-                              "templateHash": "3003044318014114141"
+                              "version": "0.47.16.16243",
+                              "templateHash": "17094779922055717472"
                             }
                           },
                           "definitions": {
@@ -5575,8 +5582,8 @@
                   "metadata": {
                     "_generator": {
                       "name": "bicep",
-                      "version": "0.46.1.21595",
-                      "templateHash": "3003044318014114141"
+                      "version": "0.47.16.16243",
+                      "templateHash": "17094779922055717472"
                     }
                   },
                   "definitions": {
@@ -5833,8 +5840,8 @@
                   "metadata": {
                     "_generator": {
                       "name": "bicep",
-                      "version": "0.46.1.21595",
-                      "templateHash": "12386175633087534749"
+                      "version": "0.47.16.16243",
+                      "templateHash": "9892026009401868564"
                     }
                   },
                   "parameters": {
@@ -5909,8 +5916,8 @@
                   "metadata": {
                     "_generator": {
                       "name": "bicep",
-                      "version": "0.46.1.21595",
-                      "templateHash": "7761912287483240241"
+                      "version": "0.47.16.16243",
+                      "templateHash": "7002299253866930644"
                     }
                   },
                   "parameters": {
@@ -6023,8 +6030,8 @@
                           "metadata": {
                             "_generator": {
                               "name": "bicep",
-                              "version": "0.46.1.21595",
-                              "templateHash": "3003044318014114141"
+                              "version": "0.47.16.16243",
+                              "templateHash": "17094779922055717472"
                             }
                           },
                           "definitions": {
@@ -6312,8 +6319,8 @@
                   "metadata": {
                     "_generator": {
                       "name": "bicep",
-                      "version": "0.46.1.21595",
-                      "templateHash": "12716651220930225870"
+                      "version": "0.47.16.16243",
+                      "templateHash": "17965237024354068482"
                     }
                   },
                   "parameters": {
@@ -6426,8 +6433,8 @@
                           "metadata": {
                             "_generator": {
                               "name": "bicep",
-                              "version": "0.46.1.21595",
-                              "templateHash": "3003044318014114141"
+                              "version": "0.47.16.16243",
+                              "templateHash": "17094779922055717472"
                             }
                           },
                           "definitions": {
@@ -6728,8 +6735,8 @@
                   "metadata": {
                     "_generator": {
                       "name": "bicep",
-                      "version": "0.46.1.21595",
-                      "templateHash": "11482305773268418100"
+                      "version": "0.47.16.16243",
+                      "templateHash": "6805329272869129530"
                     }
                   },
                   "parameters": {
@@ -6955,8 +6962,8 @@
                           "metadata": {
                             "_generator": {
                               "name": "bicep",
-                              "version": "0.46.1.21595",
-                              "templateHash": "3003044318014114141"
+                              "version": "0.47.16.16243",
+                              "templateHash": "17094779922055717472"
                             }
                           },
                           "definitions": {
@@ -7374,8 +7381,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.46.1.21595",
-              "templateHash": "10845179408590578700"
+              "version": "0.47.16.16243",
+              "templateHash": "7261434456633762539"
             }
           },
           "definitions": {
@@ -7565,8 +7572,8 @@
                   "metadata": {
                     "_generator": {
                       "name": "bicep",
-                      "version": "0.46.1.21595",
-                      "templateHash": "3003044318014114141"
+                      "version": "0.47.16.16243",
+                      "templateHash": "17094779922055717472"
                     }
                   },
                   "definitions": {
@@ -7929,8 +7936,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.46.1.21595",
-              "templateHash": "12478855472761307538"
+              "version": "0.47.16.16243",
+              "templateHash": "6800819227793551064"
             }
           },
           "parameters": {
@@ -10174,8 +10181,8 @@
                   "metadata": {
                     "_generator": {
                       "name": "bicep",
-                      "version": "0.46.1.21595",
-                      "templateHash": "3003044318014114141"
+                      "version": "0.47.16.16243",
+                      "templateHash": "17094779922055717472"
                     }
                   },
                   "definitions": {
@@ -10455,8 +10462,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.46.1.21595",
-              "templateHash": "13981732864452134048"
+              "version": "0.47.16.16243",
+              "templateHash": "15906717303902748818"
             }
           },
           "parameters": {
@@ -10547,6 +10554,12 @@
           "foundryProjectEndpoint": "[if(parameters('useExistingAiProject'), createObject('value', reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('resourceGroupName')), 'Microsoft.Resources/deployments', 'existing-ai-project'), '2025-04-01').outputs.FOUNDRY_PROJECT_ENDPOINT.value), createObject('value', reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('resourceGroupName')), 'Microsoft.Resources/deployments', 'ai-project'), '2025-04-01').outputs.FOUNDRY_PROJECT_ENDPOINT.value))]",
           "foundryModel": {
             "value": "[parameters('webFoundryModel')]"
+          },
+          "foundryTrainedModel": {
+            "value": "[parameters('webFoundryTrainedModel')]"
+          },
+          "speechEndpoint": {
+            "value": "[format('https://{0}.cognitiveservices.azure.com/', if(parameters('useExistingAiProject'), reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('resourceGroupName')), 'Microsoft.Resources/deployments', 'existing-ai-project'), '2025-04-01').outputs.aiServicesAccountName.value, reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('resourceGroupName')), 'Microsoft.Resources/deployments', 'ai-project'), '2025-04-01').outputs.aiServicesAccountName.value))]"
           }
         },
         "template": {
@@ -10555,8 +10568,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.46.1.21595",
-              "templateHash": "16472593058361776549"
+              "version": "0.47.16.16243",
+              "templateHash": "1467957943682398894"
             }
           },
           "parameters": {
@@ -10603,7 +10616,23 @@
               "metadata": {
                 "description": "Deployed Foundry model name"
               }
+            },
+            "foundryTrainedModel": {
+              "type": "string",
+              "defaultValue": "",
+              "metadata": {
+                "description": "Optional fine-tuned model deployment used by Model Lab"
+              }
+            },
+            "speechEndpoint": {
+              "type": "string",
+              "metadata": {
+                "description": "Azure Speech endpoint used for recording transcription"
+              }
             }
+          },
+          "variables": {
+            "trainedModelEnvironment": "[if(empty(parameters('foundryTrainedModel')), createArray(), createArray(createObject('name', 'FOUNDRY_TRAINED_MODEL', 'value', parameters('foundryTrainedModel'))))]"
           },
           "resources": [
             {
@@ -10654,20 +10683,7 @@
                         "-c",
                         "if [ -f /app/app.py ]; then exec streamlit run /app/app.py --server.address=0.0.0.0 --server.port=8501 --server.headless=true --browser.gatherUsageStats=false; else exec python -m http.server 8501; fi"
                       ],
-                      "env": [
-                        {
-                          "name": "AZURE_USE_MANAGED_IDENTITY",
-                          "value": "true"
-                        },
-                        {
-                          "name": "FOUNDRY_PROJECT_ENDPOINT",
-                          "value": "[parameters('foundryProjectEndpoint')]"
-                        },
-                        {
-                          "name": "FOUNDRY_MODEL",
-                          "value": "[parameters('foundryModel')]"
-                        }
-                      ],
+                      "env": "[concat(createArray(createObject('name', 'AZURE_USE_MANAGED_IDENTITY', 'value', 'true'), createObject('name', 'FOUNDRY_PROJECT_ENDPOINT', 'value', parameters('foundryProjectEndpoint')), createObject('name', 'FOUNDRY_MODEL', 'value', parameters('foundryModel')), createObject('name', 'AZURE_SPEECH_ENDPOINT', 'value', parameters('speechEndpoint'))), variables('trainedModelEnvironment'))]",
                       "resources": {
                         "cpu": "[json('1')]",
                         "memory": "2Gi"
@@ -10794,8 +10810,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.46.1.21595",
-              "templateHash": "12720876182390489360"
+              "version": "0.47.16.16243",
+              "templateHash": "17050905531693446834"
             }
           },
           "parameters": {
@@ -10863,6 +10879,17 @@
               "name": "[guid(resourceId('Microsoft.CognitiveServices/accounts/projects', parameters('aiServicesAccountName'), parameters('aiFoundryProjectName')), parameters('principalId'), '53ca6127-db72-4b80-b1b0-d745d6d5456d')]",
               "properties": {
                 "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '53ca6127-db72-4b80-b1b0-d745d6d5456d')]",
+                "principalId": "[parameters('principalId')]",
+                "principalType": "ServicePrincipal"
+              }
+            },
+            {
+              "type": "Microsoft.Authorization/roleAssignments",
+              "apiVersion": "2022-04-01",
+              "scope": "[resourceId('Microsoft.CognitiveServices/accounts', parameters('aiServicesAccountName'))]",
+              "name": "[guid(resourceId('Microsoft.CognitiveServices/accounts', parameters('aiServicesAccountName')), parameters('principalId'), 'f2dc8367-1007-4938-bd23-fe263f013447')]",
+              "properties": {
+                "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'f2dc8367-1007-4938-bd23-fe263f013447')]",
                 "principalId": "[parameters('principalId')]",
                 "principalType": "ServicePrincipal"
               }

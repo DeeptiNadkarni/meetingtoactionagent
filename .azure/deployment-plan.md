@@ -256,6 +256,31 @@ session expired on 2026-09-27, so fresh interactive MFA is required before valid
 - [x] Report the fully qualified URL and live Azure role assignments
 - [x] Set plan status to `Deployed`
 
+### Advanced Single-Meeting Public Update: Validation (2026-10-14)
+- [x] All validation checks pass
+	- [x] 1. AZD Installation
+	- [x] 2. Schema Validation
+	- [x] 3. Environment Setup
+	- [x] 4. Authentication Check
+	- [x] 5. Subscription/Location Check
+	- [x] 6. Aspire Pre-Provisioning Checks (not applicable)
+	- [x] 7. Provision Preview
+	- [x] 8. Build Verification
+	- [x] 9. Docker Build Context Validation
+	- [x] 10. Package Validation
+	- [x] 11. Azure Policy Validation
+	- [x] 12. Aspire Post-Provisioning Checks (not applicable)
+- [x] Record fresh validation proof
+- [x] Set plan status to `Validated`
+
+### Advanced Single-Meeting Public Update: Deployment (2026-10-14)
+- [x] Deploy the advanced application image to the existing Container App
+- [x] Preserve the production `gpt-5.4-mini` deployment
+- [x] Configure the trained Model Lab deployment name
+- [x] Verify public HTTPS health and the advanced workflow
+- [x] Verify live managed-identity RBAC
+- [x] Record deployment outputs
+
 ---
 
 ## 8. Validation Proof
@@ -274,6 +299,13 @@ session expired on 2026-09-27, so fresh interactive MFA is required before valid
 | Website ARM validation | `validate-deployment.ps1 -Scope sub -Location eastus2` | Pass: build and ARM validation; Create 4, Modify 0, Delete 0 | 2026-09-27T12:36:20Z |
 | Website policy review | Azure MCP `policy_assignment_list` | Pass: East US 2 allowed; MFA write/delete policies satisfied; Security Center policies are audit-only | 2026-09-27T12:36:20Z |
 | Website container hygiene | Review `Dockerfile` and `.dockerignore` | Pass: local credentials, Azure state, tokens, tests, and generated data excluded | 2026-09-27T12:36:20Z |
+| Advanced Azure context | `az account show`, `azd auth login --check-status`, `azd env get-values` | Pass: confirmed subscription, tenant, existing `meetingtoaction` environment, and East US 2 | 2026-10-14 |
+| Advanced app build | `.venv\Scripts\python.exe -m pytest -q`, `compileall`, and `pip check` | Pass: 70 tests, compilation, and dependency integrity | 2026-10-14 |
+| Advanced Bicep validation | `validate-deployment.ps1 -Scope sub -Location eastus2` with concrete ARM parameters | Pass: build, ARM validation, and what-if; reported removals are property-level API normalization, not resource deletion | 2026-10-14 |
+| Advanced provision preview | `azd provision --preview --no-prompt` | Pass: modifies the existing Container App, environment, and registry; Foundry resources skipped | 2026-10-14 |
+| Advanced package | `azd package --no-prompt` and Docker context review | Pass: web service packaged; local credentials, Azure state, tests, evaluation, and generated documents excluded | 2026-10-14 |
+| Advanced target inventory | Existing environment and `azd-service-name=web` checks | Pass: one succeeded Container Apps environment and one tagged Container App; no duplicate target | 2026-10-14 |
+| Advanced static RBAC | Review `web-role-assignments.bicep` against application data operations | Pass: AcrPull at registry, Azure AI User at project, and Cognitive Services Speech User at AI account scope | 2026-10-14 |
 
 ### Role Assignment Verification
 
@@ -311,6 +343,19 @@ session expired on 2026-09-27, so fresh interactive MFA is required before valid
 - Foundry preservation: `gpt-5.4-mini` remains version `2026-03-17`, GlobalStandard capacity 10, provisioning state `Succeeded`.
 - Final tests: 44 passed; Python compilation and editor diagnostics passed.
 - Inventory: six pre-existing resources plus the expected ACR, Container Apps environment, and Container App; no existing baseline resource was modified or deleted by the validated what-if.
+
+### Advanced Single-Meeting Deployment Verification
+
+- Deployment completed on 2026-10-14 using azd 1.35.1 after provisioning the validated Bicep update separately from the application image.
+- Public endpoint: `https://ca-mta-nlmcnaci.greenground-3fac55c9.eastus2.azurecontainerapps.io/`.
+- Active revision: `ca-mta-nlmcnaci--azd-1791970708`, healthy and provisioned.
+- Image: `crmtanlmcnaciof.azurecr.io/ai-foundry-starter-basic/web-meetingtoaction:azd-deploy-1791970619`.
+- HTTPS verification: Streamlit root returned HTTP 200 and `/_stcore/health` returned HTTP 200 with `ok`.
+- Runtime settings: production model `gpt-5.4-mini`, trained model `meeting-to-action-sft-v1`, and the account-scoped Azure Speech endpoint are present; no API key is configured.
+- Live RBAC for principal `c4ddb24e-cd01-40c0-b71f-94d6dd78d584`: `AcrPull` at registry scope, `Foundry User` at project scope, and `Cognitive Services Speech User` at AI account scope.
+- Browser verification: all four clarified ingestion modes rendered, production extraction returned one action, one decision, and one open question, Model Lab rendered its single-pass comparison control, and no alerts or horizontal overflow were present.
+- Hosted Speech verification: a non-sensitive synthetic WAV was transcribed through the public app using managed identity.
+- Latest revision logs show successful Streamlit startup with no authentication, application, or unclosed-session errors.
 
 **Validated by:** azure-validate workflow
 **Website validation timestamp:** 2026-09-27T12:36:20Z

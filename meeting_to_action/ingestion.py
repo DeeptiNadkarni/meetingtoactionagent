@@ -13,8 +13,11 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
+from meeting_to_action.advanced import ContextDocument
+
 MAX_TRANSCRIPT_BYTES = 10 * 1024 * 1024
 SUPPORTED_EXTENSIONS = {".txt", ".vtt", ".srt", ".docx", ".eml"}
+SUPPORTED_CONTEXT_EXTENSIONS = {".txt", ".docx", ".pdf"}
 TIMECODE = re.compile(
     r"^\s*(?:\d{2}:)?\d{2}:\d{2}[,.]\d{3}\s+-->\s+(?:\d{2}:)?\d{2}:\d{2}[,.]\d{3}"
 )
@@ -106,6 +109,32 @@ def parse_uploaded_transcript(
     )
 
 
+def parse_context_document(filename: str, content: bytes) -> ContextDocument:
+    if len(content) > MAX_TRANSCRIPT_BYTES:
+        raise ValueError("Supporting document exceeds the 10 MB limit")
+    suffix = Path(filename).suffix.lower()
+    if suffix not in SUPPORTED_CONTEXT_EXTENSIONS:
+        supported = ", ".join(sorted(SUPPORTED_CONTEXT_EXTENSIONS))
+        raise ValueError(f"Unsupported supporting document type. Supported types: {supported}")
+
+    if suffix == ".txt":
+        text = content.decode("utf-8-sig")
+    elif suffix == ".docx":
+        text = _parse_docx(content)
+    else:
+        text = _parse_pdf(content)
+    normalized = text.strip()
+    if not normalized:
+        raise ValueError("Supporting document contains no readable text")
+    return ContextDocument(
+        id=hashlib.sha256(content).hexdigest()[:16],
+        title=Path(filename).stem,
+        filename=filename,
+        text=normalized,
+        content_hash=hashlib.sha256(content).hexdigest(),
+    )
+
+
 def _parse_caption_text(text: str) -> str:
     output: list[str] = []
     for block in re.split(r"\n\s*\n", text.replace("\r\n", "\n")):
@@ -148,6 +177,13 @@ def _parse_docx(content: bytes) -> str:
 
     document = Document(BytesIO(content))
     return "\n".join(paragraph.text.strip() for paragraph in document.paragraphs if paragraph.text.strip())
+
+
+def _parse_pdf(content: bytes) -> str:
+    from pypdf import PdfReader
+
+    reader = PdfReader(BytesIO(content))
+    return "\n".join(text for page in reader.pages if (text := (page.extract_text() or "").strip()))
 
 
 def _parse_eml(content: bytes, fallback_title: str) -> tuple[str, str, dict[str, Any]]:

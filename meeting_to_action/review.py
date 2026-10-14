@@ -1,8 +1,10 @@
 """Human review transformations that preserve model-supplied evidence."""
 
 from collections.abc import Mapping, Sequence
+from datetime import datetime
 from typing import Any
 
+from meeting_to_action.advanced import CorrectionEvent
 from meeting_to_action.models import ActionItem, Decision, MeetingExtraction, MeetingNote, OpenQuestion
 
 
@@ -43,6 +45,26 @@ def build_change_audit(
                         }
                     )
     return changes
+
+
+def build_correction_events(
+    changes: Sequence[Mapping[str, Any]],
+    *,
+    actor: str,
+    changed_at: datetime,
+) -> list[CorrectionEvent]:
+    return [
+        CorrectionEvent(
+            changed_at=changed_at,
+            actor=actor,
+            record_type=str(change["record_type"]),
+            record_id=str(change["record_id"]),
+            field=str(change["field"]),
+            before=change.get("before"),
+            after=change.get("after"),
+        )
+        for change in changes
+    ]
 
 
 def apply_review_edits(
