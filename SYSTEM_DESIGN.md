@@ -2,8 +2,9 @@
 
 ## System Design Document
 
-**Status:** Advanced single-meeting branch implemented; public production unchanged
-**Last updated:** September 28, 2026
+**Status:** Advanced single-meeting branch publicly deployed and verified
+**Last updated:** October 14, 2026
+**Branch:** `feature/advanced-single-meeting` (`5566b02`); `main` remains separate
 **Primary runtime:** Python 3.12 and Streamlit
 **AI platform:** Microsoft Foundry with Microsoft Agent Framework
 
@@ -30,8 +31,8 @@ review before it can support question answering or a downstream calendar action.
 The advanced branch adds Azure Speech recording/live-clip ingestion, timestamped speaker
 segments, supporting-document alignment, explainable conflict checks, actor-attributed correction
 history, an evidence-linked playback timeline, and approval-gated Outlook/Teams workflow previews.
-It remains scoped to one meeting in session memory and does not alter the deployed production
-revision or replace `gpt-5.4-mini` with the experimental fine-tuned model.
+It remains scoped to one meeting in session memory. This branch is deployed publicly, but normal
+traffic still uses `gpt-5.4-mini`; the experimental fine-tuned model is isolated to Model Lab.
 
 ## 2. Problem Definition
 
@@ -102,10 +103,10 @@ The system solves a narrow problem:
 | Safety | No inferred owners or years; no autonomous calendar action; human approval gate. |
 | Explainability | Every record exposes source evidence; review changes are auditable. |
 | Maintainability | Domain behavior is separated into small Python modules with typed contracts. |
-| Testability | External/model boundaries are mockable; 40 automated tests cover core behavior. |
+| Testability | External/model boundaries are mockable; 70 automated tests cover core and advanced behavior. |
 | Cost awareness | Architecture comparison records generation calls and latency per strategy. |
 | Privacy | Credentials and connector metadata are excluded from prompts; transcript content is sent only to the configured Foundry model. |
-| Availability | Current local runtime is single-instance and has no high-availability guarantee. |
+| Availability | Azure Container Apps scales from zero to one replica; there is no multi-replica or cross-region guarantee. |
 
 ## 4. System Context
 
@@ -114,16 +115,22 @@ flowchart LR
     User[Meeting organizer or reviewer]
     App[Meeting to Action\nStreamlit application]
     Sources[Transcript sources\nFiles, M365, Teams, Blob,\nGoogle, Gmail, Zoom]
+    Speech[Azure Speech\nFast transcription]
+    Context[Supporting documents\nTXT, DOCX, PDF]
     Foundry[Microsoft Foundry\nGeneration deployment]
     Judge[Microsoft Foundry\nIndependent judge deployment]
     Calendars[Calendar providers\nGoogle, Outlook, Yahoo, ICS]
+    Workflows[Outlook and Teams\nDraft destinations]
 
     User -->|Import, review, approve, ask| App
     Sources -->|Read-only transcript content| App
+    Speech -->|Diarized text and timestamps| App
+    Context -->|Non-authoritative alignment context| App
     App -->|Normalized transcript and typed prompts| Foundry
     Foundry -->|Structured extraction or answer| App
     App -->|Benchmark reference and candidate| Judge
     App -->|Approved event draft| Calendars
+    App -->|Approved message or card draft| Workflows
 ```
 
 ### 4.1 Actors
@@ -136,6 +143,7 @@ flowchart LR
 ### 4.2 External dependencies
 
 - Microsoft Foundry project and model deployments.
+- Existing Azure Speech endpoint with fast transcription enabled.
 - Azure CLI or managed identity credentials for Foundry and Azure Blob access.
 - Microsoft Graph delegated authentication for Microsoft 365 and Teams.
 - Google OAuth for Drive, Gmail, and Calendar.
@@ -149,19 +157,27 @@ flowchart TB
     UI[Streamlit UI and session workflow]
     Connectors[Connector adapters]
     Ingestion[Ingestion and normalization]
+    Speech[Speech transcription]
+    Context[Context parsing]
     Transcript[Numbered transcript]
     Extraction[Extraction orchestration]
     Contracts[Pydantic domain contracts]
     Validation[Deterministic grounding validation]
     Review[Human review and change audit]
+    Quality[Quality and conflict analysis]
+    Timeline[Evidence timeline]
     Retrieval[BM25 line retrieval]
     Ask[Grounded question answering]
     Calendar[Calendar draft and approval gate]
+    Workflows[Outlook and Teams drafts]
+    ModelLab[Single-pass Model Lab]
     Evaluation[Benchmark and calibration]
     Foundry[FoundryChatClient]
 
     UI --> Connectors
     UI --> Ingestion
+    UI --> Speech --> Ingestion
+    UI --> Context --> Quality
     Connectors --> Ingestion
     Ingestion --> Transcript
     Transcript --> Extraction
@@ -169,6 +185,8 @@ flowchart TB
     Foundry --> Contracts
     Contracts --> Validation
     Validation --> Review
+    Validation --> Quality
+    Validation --> Timeline
     Review --> UI
     Review --> Retrieval
     Transcript --> Retrieval
@@ -176,6 +194,8 @@ flowchart TB
     Ask --> Foundry
     Ask --> Validation
     Review --> Calendar
+    Review --> Workflows
+    Validation --> ModelLab
     Evaluation --> Extraction
     Evaluation --> Foundry
 ```
@@ -290,6 +310,11 @@ store, encrypt data at rest, associate changes with reviewer identity, and apply
 8. Export audits or calendar payloads only at user request.
 9. Lose session data when the process or session ends unless the user exported it.
 
+For recording upload, raw media bytes remain in the active session to support timestamp seeking.
+For live mode, each submitted browser microphone clip is transcribed and appended with adjusted
+segment offsets; clips are not retained as one continuous playable recording. Supporting document
+text and correction events also remain session-scoped and are cleared with the meeting workflow.
+
 ## 7. Core Processing Flows
 
 ### 7.1 Transcript ingestion and extraction
@@ -340,6 +365,41 @@ shows the complete event payload and requires explicit confirmation. Google Cale
 Outlook and Yahoo open user-reviewed drafts; other providers use an ICS download. The system does
 not automatically send invitations.
 
+### 7.5 Recording and live-clip transcription
+
+1. The user selects **Upload audio/video recording** or **Record live meeting clips**.
+2. The UI validates a supported AAC, FLAC, M4A, MOV, MP3, MP4, OGG, WAV, WEBM, or WMA payload of
+    at most 300 MB and requires a speaker maximum between 2 and 35.
+3. `speech.py` calls Azure Speech fast transcription with candidate locales and diarization.
+4. Recognized phrases become immutable `TranscriptSegment` records with text, speaker, locale,
+    start milliseconds, and end milliseconds.
+5. The normalized speaker-labelled text becomes the authoritative transcript. Uploaded media is
+    retained for timeline playback; live segments are appended with monotonic offsets.
+
+### 7.6 Quality, context, and timeline
+
+`quality.py` deterministically flags missing owners and deadlines. It reports context alignment
+when action-token overlap with a supporting-document line reaches `0.4`. It reports a potential
+conflict when similar action text has Jaccard overlap of at least `0.65` and explicit owners or
+deadlines differ. Context citations do not become transcript evidence. `timeline.py` maps the
+first evidence range for each action, decision, and question to the corresponding Speech segment
+when available and otherwise falls back to line order.
+
+### 7.7 Correction and communication workflow
+
+Approval compares generated and reviewed records and appends actor-attributed `CorrectionEvent`
+entries containing timestamp, record type, record ID, field, and before/after values. An approved
+action can then produce Outlook and Teams deep links or an Adaptive Card 1.5 download. With a
+delegated Microsoft token, Graph may create a saved `/me/messages` draft. There is no automatic
+send endpoint.
+
+### 7.8 Model Lab
+
+Model Lab compares exactly one production single-model extraction with one trained-model
+single-model extraction on the same transcript. It reuses the main result only when the selected
+strategy was already single-model; otherwise it requests a separate production pass. The result
+is session-scoped and has no promotion or training-data side effect.
+
 ## 8. Model Orchestration
 
 ### 8.1 Strategies
@@ -369,13 +429,14 @@ tradeoff decision, not a claim of dominance across every metric.
 | --- | --- | --- | --- | --- |
 | Production generation | `gpt-5.4-mini` | `gpt-5.4-mini`, `2026-03-17` | GlobalStandard, 10 | `FOUNDRY_MODEL`; default extraction and Ask |
 | Independent judge | `gpt-4.1-judge` | `gpt-4.1`, `2025-04-14` | GlobalStandard, 10 | `FOUNDRY_JUDGE_MODEL`; offline evaluation only |
-| Experimental generation | `meeting-to-action-sft-v1` | Fine-tuned `gpt-4.1-mini`, `2025-04-14`, checkpoint step 48 | DeveloperTier, 10 | `FOUNDRY_TRAINED_MODEL`; Model Lab only |
+| Experimental generation | `meeting-to-action-sft-v1` | Fine-tuned `gpt-4.1-mini`, `2025-04-14`, checkpoint step 48 | DeveloperTier, 50 | `FOUNDRY_TRAINED_MODEL`; Model Lab only |
 
 The deployments are in East US 2 under Foundry account `ai-account-nlmcnaciofa6y` and project
-`ai-project-meetingtoaction`. Model Lab reuses the selected extraction architecture and transcript,
-shows the existing production result as its baseline, and invokes the trained deployment through
-an explicit model override. It does not mutate `FOUNDRY_MODEL`, write training data, or affect the
-normal extraction, review, Ask, or calendar paths.
+`ai-project-meetingtoaction`. Model Lab forces a one-pass comparison on both deployments. It
+reuses an existing production result only when that result came from the single-model strategy
+and invokes the trained deployment through an explicit model override. It does not mutate
+`FOUNDRY_MODEL`, write training data, or affect the normal extraction, review, Ask, or calendar
+paths.
 
 - The evaluation code rejects a missing judge deployment or one with the same name as the
   generation deployment.
@@ -437,7 +498,8 @@ flowchart LR
 - Foundry uses `AzureCliCredential` locally and `ManagedIdentityCredential` in the deployed
     Container App.
 - The Container App system identity has `Foundry User` at project scope and `AcrPull` at registry
-    scope; neither assignment is subscription- or resource-group-scoped.
+    scope, plus `Cognitive Services Speech User` at AI account scope; none of these assignments is
+    subscription- or resource-group-scoped.
 - Microsoft Graph uses delegated permissions so access follows the signed-in user.
 - Azure Blob access requires the Storage Blob Data Reader role.
 - Google and Zoom use provider-specific OAuth credentials and least-privilege read scopes.
@@ -474,7 +536,8 @@ The application is deployed and publicly reachable at
 https://ca-mta-nlmcnaci.greenground-3fac55c9.eastus2.azurecontainerapps.io/. The hosted runtime uses
 Azure Container Apps in East US 2 and references the existing Microsoft Foundry account and project
 without modifying them. The generation and independent judge deployments remain separate; only
-`gpt-5.4-mini` is used by the interactive website.
+`gpt-5.4-mini` is used by normal extraction and Ask, while `meeting-to-action-sft-v1` is available
+only through the explicit Model Lab control.
 
 ```mermaid
 flowchart TB
@@ -485,6 +548,8 @@ flowchart TB
         ACR[Authenticated Azure Container Registry\ncrmtanlmcnaciof]
     FoundryProject[Microsoft Foundry project]
     Generation[gpt-5.4-mini]
+    Trained[meeting-to-action-sft-v1\nModel Lab only]
+    Speech[Azure Speech endpoint]
         Logs[Existing Log Analytics workspace]
 
         Browser --> Ingress --> Streamlit
@@ -492,6 +557,8 @@ flowchart TB
         Streamlit --> Identity
         Identity -->|Foundry User| FoundryProject
     FoundryProject --> Generation
+    FoundryProject --> Trained
+        Identity -->|Speech User| Speech
         Streamlit -. Runtime logs .-> Logs
 ```
 
@@ -504,12 +571,21 @@ flowchart TB
 | Runtime | Python 3.12 non-root image, single revision, 0-1 replicas |
 | Ingress | Public HTTPS only, insecure transport disabled |
 | Health | Root and `/_stcore/health` return HTTP 200 |
-| Identity | System-assigned; project-scoped `Foundry User`, registry-scoped `AcrPull` |
+| Identity | System-assigned; project-scoped `Foundry User`, registry-scoped `AcrPull`, account-scoped `Cognitive Services Speech User` |
 | Live AI verification | Extractor + verifier returned grounded actions, decisions, notes, and questions |
+| Active revision | `ca-mta-nlmcnaci--azd-1791970708` |
+| Active image | `crmtanlmcnaciof.azurecr.io/ai-foundry-starter-basic/web-meetingtoaction:azd-deploy-1791970619` |
+| Speech | Account endpoint configured without an API key; managed-identity synthetic WAV transcription verified |
+| Model Lab | Step-48 deployment `Succeeded`; direct grounded single-pass inference verified; production routing unchanged |
 
 Local development remains available at `localhost:8501` and uses `AzureCliCredential`. Hosted
 Google, Zoom, and delegated Microsoft connector flows are not enabled until server-safe OAuth
 callbacks and durable token storage are designed.
+
+The deployed environment sets `FOUNDRY_PROJECT_ENDPOINT`, `FOUNDRY_MODEL=gpt-5.4-mini`,
+`FOUNDRY_TRAINED_MODEL=meeting-to-action-sft-v1`, and the account-scoped
+`AZURE_SPEECH_ENDPOINT`. It does not set `AZURE_SPEECH_API_KEY`. Local development can use the
+same endpoint with Azure CLI RBAC or an optional key that remains outside source control.
 
 ### 11.2 Production hardening roadmap
 
@@ -534,6 +610,10 @@ callbacks and durable token storage are designed.
 | Incorrect line range with uniquely found quote | Repair the range deterministically. |
 | Invalid answer citation | Fail the grounded answer. |
 | Missing Foundry configuration | Allow deterministic demo mode; reject Foundry strategies. |
+| Missing Speech endpoint | Keep text modes available and explain the required endpoint and role. |
+| Empty, oversized, unsupported, or speaker-invalid media | Reject before calling Azure Speech. |
+| Azure Speech returns no phrases | Reject the import instead of creating an empty transcript. |
+| Experimental deployment absent or throttled | Keep production paths unchanged and surface a Model Lab-specific error. |
 | Calendar not approved | Do not invoke the provider action. |
 | Session/process loss | Current in-memory work is lost unless exported. |
 
@@ -581,7 +661,9 @@ manifest. Generated training and review files are not committed.
 
 Training used DeveloperTier, two epochs, a `0.5` learning-rate multiplier, service-selected batch size `1`,
 366,438 trained tokens, and 336,000 billed tokens. Validation evidence favored checkpoint step 48
-over the final step 96 model. The frozen-set comparison used the single-model strategy for both
+over the final step 96 model: deployable validation loss was `0.3387` versus `0.3543`. The best
+raw validation loss, `0.1937` at step 95, was not a deployable checkpoint. The frozen-set
+comparison used the single-model strategy for both
 the pretrained `gpt-4.1-mini` base and trained deployment. This promotion test isolates the effect
 of SFT within one model family; it is not a direct benchmark against production `gpt-5.4-mini`:
 
@@ -601,6 +683,10 @@ The latency regression and six-case sample size do not justify replacing the pro
 Separately, Model Lab performs an operational side-by-side comparison between production
 `gpt-5.4-mini` and the SFT deployment on a user-supplied transcript, without treating one example
 as benchmark evidence.
+
+The committed six-case production baseline for `gpt-5.4-mini` reports exact F1 `0.0000`, semantic
+F1 `0.0289`, grounding `1.0000`, judge average `4.1683`, and mean latency `10.8378 s`. It is a
+separate artifact from the architecture benchmark and SFT promotion comparison.
 
 The semantic F1 calculation uses pretrained `sentence-transformers/all-MiniLM-L6-v2` embeddings;
 the project neither trains that model nor includes its training corpus. Synthetic test fixtures
@@ -659,10 +745,12 @@ state. For higher volume:
 
 ## 17. Testing Strategy
 
-The 44-test suite covers contracts, transcript normalization, ingestion formats, evidence
+The 70-test suite covers contracts, transcript normalization, ingestion formats, evidence
 validation and repair, extraction strategies, BM25 retrieval, grounded answers, review
 reconstruction, change auditing, calendar approval, connectors, independent-judge safeguards,
-semantic metrics, and human calibration reporting.
+semantic metrics, human calibration reporting, Speech media validation and segment conversion,
+supporting-context parsing, quality/conflict findings, correction events, timeline mapping,
+Outlook/Teams payloads, and advanced speech/conflict evaluation metrics.
 
 Additional production tests should cover load and soak behavior, identity and tenant isolation,
 provider sandbox integration, accessibility, disaster recovery, prompt-injection resilience,
@@ -678,6 +766,8 @@ PII redaction, and end-to-end deployment verification.
 | Judge bias or inconsistency | Misleading architecture choice | Separate deployment and human calibration | Track outliers and periodically recalibrate |
 | Session-state loss | Lost work and audit | User exports | Durable authenticated persistence and backup |
 | Provider outage or throttling | Failed imports or model calls | Errors surfaced to user | Timeouts, retries, circuit breaking, and asynchronous jobs |
+| Speech recognition or diarization error | Incorrect transcript attribution or timing | Human review, transcript authority, deterministic advanced metrics | Annotated multilingual speech benchmark and correction UX |
+| Developer-tier SFT unavailable or throttled | Model Lab comparison fails | Production model remains isolated and unaffected | Availability monitoring or a supported non-production tier with explicit budget |
 | Weak lexical retrieval | Missed relevant evidence | Approved record plus neighboring BM25 context | Retrieval evaluation and tenant-filtered hybrid search if justified |
 | Over-privileged connector application | Excess data exposure | Read-only and delegated scopes where possible | Formal least-privilege review and conditional access |
 
@@ -702,6 +792,8 @@ The implemented system satisfies the capstone focus areas:
 - **Evaluation:** deterministic metrics, an independent LLM judge, and passed human calibration.
 - **Decision reasoning:** architecture choices are tied to reliability, explainability, cost, and
   measured tradeoffs.
+- **Advanced meeting workflow:** media and live-clip transcription, context-aware quality review,
+    timestamped evidence, correction history, and approval-gated Outlook/Teams drafts.
 
 The design is complete for a capstone and is deployed as a public Azure demonstration. Durable
 persistence, authenticated multi-user access, formal PII controls, stronger production

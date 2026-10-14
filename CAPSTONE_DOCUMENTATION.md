@@ -6,6 +6,12 @@
 
 **Technology:** Python 3.12, Streamlit, Azure Container Apps, Azure Container Registry, Microsoft Agent Framework, Microsoft Foundry, Pydantic, BM25 retrieval, Microsoft Graph and other content connectors.
 
+**Branch:** `feature/advanced-single-meeting` (advanced implementation commit `5566b02`)
+
+**Status:** Publicly deployed and verified on October 14, 2026; `main` remains separate.
+
+**Public URL:** https://ca-mta-nlmcnaci.greenground-3fac55c9.eastus2.azurecontainerapps.io/
+
 ---
 
 ## Advanced single-meeting branch addendum
@@ -14,8 +20,14 @@ The separate `feature/advanced-single-meeting` branch adds audio/video and succe
 clip transcription through Azure Speech, speaker/timestamp segments, optional agenda/PDF/DOCX
 context, deterministic quality and conflict explanations, actor-attributed correction history,
 an evidence-linked playback timeline, and approval-gated Outlook/Teams workflow previews. It does
-not add cross-meeting storage, alter the public Container App revision, or route normal production
-traffic to the fine-tuned model.
+not add cross-meeting storage or route normal production traffic to the fine-tuned model. This
+branch is the version currently deployed to the public Container App; `main` was not modified.
+
+The sidebar distinguishes four user intents: **Paste transcript text**,
+**Upload transcript file**, **Upload audio/video recording**, and **Record live meeting clips**. After extraction,
+the workspace exposes **Review**, **Quality**, **Timeline**, **Ask**, **Calendar**, **Workflows**,
+and **Model Lab** tabs. Live mode is successive browser microphone clips, not continuous
+background listening or a bot that joins a Teams meeting.
 
 Transcript quotes and line ranges remain the only evidence that a meeting outcome occurred.
 Supporting documents can explain alignment but cannot create actions or decisions. Outlook Graph
@@ -53,6 +65,10 @@ Meeting to Action solves one narrow problem: **convert a single meeting transcri
 5. Answer factual and analytical questions with citations.
 6. Prepare calendar follow-ups only after explicit approval.
 7. Compare alternative AI architectures using repeatable evaluation.
+8. Transcribe uploaded media and live microphone clips with speakers and timestamps.
+9. Explain deterministic quality issues and align optional supporting context without weakening
+    transcript authority.
+10. Prepare Outlook and Teams follow-up drafts only after explicit approval.
 
 ### Scope and success criteria
 
@@ -66,7 +82,9 @@ The capstone demonstrates a complete AI application rather than an isolated prom
 
 ### Data surface
 
-The transcript is the primary knowledge base. Users can paste text, upload a document, or query configured external sources:
+The transcript is the primary knowledge base. Users can paste text, upload a transcript document,
+transcribe a complete audio/video recording, record successive live microphone clips, or query
+configured external sources:
 
 - Microsoft 365 and SharePoint files
 - Teams meeting transcripts
@@ -77,9 +95,16 @@ The transcript is the primary knowledge base. Users can paste text, upload a doc
 
 Remote connectors are read-only. Credentials, tokens, source URLs, and connector metadata are not included in model prompts. The model receives only normalized meeting content and approved structured records.
 
+Optional TXT, DOCX, and PDF agenda or supporting documents are parsed into separate
+`ContextDocument` records. They may support a deterministic alignment finding, but only the
+transcript can prove that an action, decision, or question occurred.
+
 ### Ingestion pipeline
 
-The ingestion layer accepts TXT, VTT, SRT, DOCX, and EML files up to 10 MB. Processing includes:
+Transcript upload accepts TXT, VTT, SRT, DOCX, and EML files up to 10 MB. Azure Speech fast
+transcription separately accepts AAC, FLAC, M4A, MOV, MP3, MP4, OGG, WAV, WEBM, and WMA media up
+to 300 MB. Users can choose candidate locales and a maximum of 2-35 speakers; defaults are
+`en-US` and six speakers. Processing includes:
 
 1. File type and size validation.
 2. Text extraction from the source format.
@@ -90,6 +115,8 @@ The ingestion layer accepts TXT, VTT, SRT, DOCX, and EML files up to 10 MB. Proc
 7. Removal of blank lines and stable 1-based line numbering.
 8. SHA-256 hashing to identify the imported content.
 9. Clearing stale extraction, review, chat, and audit state when the source changes.
+10. Converting recognized phrases into speaker-labelled `TranscriptSegment` objects with start
+    and end milliseconds for recording-derived transcripts.
 
 Numbered lines form the evidence contract. Every extracted record contains a verbatim quote and line range. Deterministic validation checks those citations against the original normalized transcript.
 
@@ -129,7 +156,9 @@ BM25 is appropriate for the current single-meeting corpus because queries common
 
 ```mermaid
 flowchart LR
-    A[Transcript sources] --> B[Ingestion and normalization]
+    A[Transcript and connector sources] --> B[Ingestion and normalization]
+    S[Azure Speech] --> B
+    Ctx[Optional supporting documents] --> Q[Quality and context analysis]
     B --> C[Numbered evidence store]
     C --> D{Extraction strategy}
     D --> D1[Single model]
@@ -140,9 +169,13 @@ flowchart LR
     D3 --> E
     E --> F[Deterministic grounding validation]
     F --> G[Human review and approval]
+    F --> Q
+    F --> T[Evidence-linked timeline]
     G --> H[Change audit]
     G --> I[BM25 retrieval and grounded Ask]
     G --> J[Calendar preview and gated action]
+    G --> W[Outlook and Teams drafts]
+    F --> L[Single-pass Model Lab]
 ```
 
 ### Orchestration approaches
@@ -180,6 +213,28 @@ The Ask feature supports direct factual questions and evidence-based analysis. R
 
 An approved action can be converted into a calendar draft with provider, date, start time, duration, time zone, and attendees. Google Calendar uses OAuth after explicit confirmation. Outlook and Yahoo open provider drafts; other clients can use an ICS download. No invitation is sent automatically.
 
+### Advanced quality, timeline, and correction workflow
+
+Quality analysis is deterministic. It flags missing action owners or deadlines, identifies
+potential conflicts when similar action text has different owners or deadlines, and reports
+supporting-document alignment only when token overlap reaches the configured threshold. It does
+not display invented confidence percentages. Timeline events map the first transcript evidence
+range for each action, decision, and question back to a Speech segment when one exists; uploaded
+media can seek to that timestamp. Review approval records actor, timestamp, record type, record
+ID, field, and before/after values as session-scoped `CorrectionEvent` entries.
+
+### Outlook, Teams, and Model Lab
+
+The Workflows tab builds an evidence-bearing Outlook compose draft, Teams chat deep link, and
+Adaptive Card 1.5 payload from an approved action. Provider links and downloads remain disabled
+until the user reviews recipients, content, and evidence. When a delegated Microsoft token is
+available, Graph may create a saved `/me/messages` draft; there is no `/send` path.
+
+Model Lab is an isolated operational comparison. It runs exactly one production single-model
+pass and one trained-model single-model pass on the same transcript, then shows action, decision,
+question, and summary snapshots side by side. It does not promote a model, change
+`FOUNDRY_MODEL`, or use submitted transcripts as training data.
+
 ### Live Azure deployment
 
 The application is live at:
@@ -190,16 +245,25 @@ Azure Container Apps hosts the Streamlit service in East US 2 with public HTTPS-
 port 8501, single-revision mode, and a 0-1 replica range. An authenticated Basic Azure Container
 Registry with its admin user disabled stores the non-root Python image. The Container App uses a
 system-assigned managed identity with
-`AcrPull` scoped to that registry and `Foundry User` scoped to the existing Foundry project. No
-Azure credentials or local OAuth token files are included in the image.
+`AcrPull` scoped to that registry, `Foundry User` scoped to the existing Foundry project, and
+`Cognitive Services Speech User` scoped to the existing AI account. No Azure credentials, Speech
+key, or local OAuth token files are included in the image.
 
-Deployment verification on September 28, 2026 confirmed HTTP 200 for the root page and Streamlit
-health endpoint, healthy revision `ca-mta-nlmcnaci--0000003`, a real production extraction, and a
-completed production-versus-trained Model Lab comparison through managed identity. Post-request
-logs contained no runtime errors, unclosed sessions, or unclosed connectors. The public site
-intentionally has no user authentication; enterprise use requires an approved identity,
-authorization, abuse-prevention, and transcript-retention design. Delegated Microsoft, Google, and
-Zoom connector flows also require server-safe hosted OAuth before they are enabled in production.
+Deployment verification on October 14, 2026 confirmed HTTP 200 for the root page and Streamlit
+health endpoint, healthy revision `ca-mta-nlmcnaci--azd-1791970708`, image
+`crmtanlmcnaciof.azurecr.io/ai-foundry-starter-basic/web-meetingtoaction:azd-deploy-1791970619`,
+a real production extraction, all four source labels, the Model Lab control, responsive layout
+without horizontal overflow, and hosted transcription of a synthetic WAV through managed
+identity. Latest revision logs showed successful Streamlit startup without authentication,
+application, or unclosed-session errors. The public site intentionally has no user authentication;
+enterprise use requires an approved identity, authorization, abuse-prevention, and
+transcript-retention design. Delegated Microsoft, Google, and Zoom connector flows also require
+server-safe hosted OAuth before they are enabled in production.
+
+The step-48 `meeting-to-action-sft-v1` deployment was also restored on `DeveloperTier` capacity
+50 and reached `Succeeded`. A direct structured inference returned one action grounded in the
+exact supplied quote, proving that the experimental Model Lab backend was callable after
+deployment rather than merely present as a UI control.
 
 <div style="page-break-after: always;"></div>
 
@@ -213,14 +277,13 @@ The live application uses three distinct deployments in East US 2:
 | --- | --- | --- | --- | --- |
 | Production generation | `gpt-5.4-mini` | `gpt-5.4-mini`, `2026-03-17` | GlobalStandard, 10 | Default extraction, Ask, and Model Lab baseline |
 | Independent judge | `gpt-4.1-judge` | `gpt-4.1`, `2025-04-14` | GlobalStandard, 10 | Offline evaluation only |
-| Experimental generation | `meeting-to-action-sft-v1` | Fine-tuned `gpt-4.1-mini`, `2025-04-14`, checkpoint step 48 | DeveloperTier, 10 | Model Lab only |
+| Experimental generation | `meeting-to-action-sft-v1` | Fine-tuned `gpt-4.1-mini`, `2025-04-14`, checkpoint step 48 | DeveloperTier, 50 | Model Lab only |
 
 The deployments belong to Foundry account `ai-account-nlmcnaciofa6y` and project
 `ai-project-meetingtoaction`. `FOUNDRY_MODEL` preserves the production path;
-`FOUNDRY_TRAINED_MODEL` activates a separate explicit model override. Model Lab applies the
-selected extraction architecture to the same transcript and renders production and trained
-results side by side. User-provided website transcripts remain runtime inputs and are never added
-to training data.
+`FOUNDRY_TRAINED_MODEL` activates a separate explicit model override. Model Lab compares one
+production single-model pass and one trained-model single-model pass on the same transcript.
+User-provided website transcripts remain runtime inputs and are never added to training data.
 
 The **AMI Meeting Corpus** is the only external public dataset incorporated into the project. The
 benchmark uses AMI manual annotations version 1.6.2, licensed under CC BY 4.0, from
@@ -237,6 +300,9 @@ two epochs, a `0.5` learning-rate multiplier, service-selected batch size `1`, 3
 tokens, and 336,000 billed tokens. Its final model ID was
 `gpt-4.1-mini-2025-04-14.ft-fee47a35427043ee9b4ed301464203f8-meeting-to-action-v1`.
 Validation evidence favored the deployable `:ckpt-step-48` checkpoint over the final step 96 model.
+Their validation losses were `0.3387` and `0.3543`, respectively. The best raw validation loss,
+`0.1937` at step 95, was not a deployable checkpoint. Developer capacity is intended for
+low-volume experiments, has no SLA, and is subject to much lower request limits than production.
 
 The frozen promotion test compared pretrained base `gpt-4.1-mini` with that SFT checkpoint using
 the single-model architecture. It did not compare the checkpoint directly with production
@@ -262,6 +328,11 @@ The semantic F1 metric uses the pretrained `sentence-transformers/all-MiniLM-L6-
 embed reference and candidate entities for comparison. This project does not train that model or
 include its training corpus. Synthetic unit-test fixtures and manually entered demonstration
 transcripts are not external public datasets.
+
+The committed production baseline artifact contains six frozen `gpt-5.4-mini` cases with exact
+F1 `0.0000`, semantic F1 `0.0289`, deterministic grounding `1.0000`, judge average `4.1683`, and
+mean generation latency `10.8378 s`. This is distinct from the three-architecture comparison and
+the base-versus-SFT promotion test.
 
 ### Evaluation design
 
@@ -333,7 +404,7 @@ tradeoff rather than a claim that one architecture dominates every measure.
 
 ### Automated testing
 
-The suite currently contains **44 passing tests** covering:
+The suite currently contains **70 passing tests** covering:
 
 - Pydantic model constraints and evidence requirements
 - Transcript normalization and exact quote location
@@ -347,11 +418,17 @@ The suite currently contains **44 passing tests** covering:
 - Calendar payload generation and approval gates
 - Connector behavior and ingestion formats
 - Exact and semantic entity F1, independent-judge safeguards, and human-calibration reporting
+- Azure Speech configuration, media constraints, phrase-to-segment conversion, and diarization
+    metadata
+- Advanced contracts, context parsing, quality/conflict findings, correction events, timeline
+    mapping, Outlook/Teams payloads, and advanced model-free evaluation metrics
 
 In addition to unit tests, the local Streamlit workflow was exercised with an 80-line Teams
 transcript. A sponsor-limit question retrieved the relevant evidence and returned “five” with
 validated citations to lines 22 and 26. The deployed Container Apps workflow was separately
 verified with a real managed-identity extractor-plus-verifier request and clean final-revision logs.
+The advanced public revision was additionally verified with managed-identity Speech transcription
+and browser checks for all source modes, advanced tabs, approval gates, and layout overflow.
 
 <div style="page-break-after: always;"></div>
 
@@ -386,6 +463,9 @@ verified with a real managed-identity extractor-plus-verifier request and clean 
 | Comparative evaluation | Three architectures measured with quantitative metrics and an LLM judge |
 | Failure analysis | Documented attempts, failures, and implementation pivots |
 | Functional interface | Streamlit ingestion, review, audit, Ask, and calendar workflow |
+| Advanced meeting input | Azure Speech recording upload and successive live microphone clips |
+| Explainable review | Deterministic quality/conflict findings, context citations, corrections, and timeline |
+| Approval-gated communication | Outlook drafts, Teams deep links, and Adaptive Card previews |
 
 ### Current limitations
 
@@ -399,6 +479,11 @@ verified with a real managed-identity extractor-plus-verifier request and clean 
     deterministic grounding checks or review of high-impact outputs.
 - Review and audit state are session-based rather than stored in an authenticated database.
 - Retrieval is scoped to one meeting and does not yet support cross-meeting search.
+- Live meeting capture is clip-based; it is not continuous background capture or a Teams bot.
+- Speech quality, diarization, timestamps, and live-versus-batch agreement need a separately
+    annotated speech benchmark before production quality claims can be made.
+- The trained Model Lab deployment uses an experimental Developer tier with no SLA and strict
+    throughput limits; it is not a production fallback.
 - The live endpoint is public and unauthenticated, so access control, quotas, and transcript
     retention are not yet suitable for enterprise traffic.
 - Delegated Microsoft, Google, and Zoom connectors require server-safe OAuth callback and token
