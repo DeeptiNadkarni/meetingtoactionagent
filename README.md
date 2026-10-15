@@ -12,8 +12,6 @@ boundaries, deployment topology, reliability model, evaluation evidence, and pro
 - [Capstone documentation (PDF)](Meeting-to-Action-Capstone-Documentation.pdf)
 - [System design (PDF)](Meeting-to-Action-System-Design.pdf)
 
-Both PDF files are unencrypted and contain no Microsoft sensitivity or IRM label metadata.
-
 ## Live website
 
 **Public URL:** https://ca-mta-nlmcnaci.greenground-3fac55c9.eastus2.azurecontainerapps.io/
